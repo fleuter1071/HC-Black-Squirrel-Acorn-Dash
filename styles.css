@@ -59,6 +59,18 @@ canvas { display: block; width: 100%; height: 100%; }
 .mission-card { position: absolute; right: 14px; bottom: 14px; width: min(265px, 35%); }
 .mission-card strong { display: block; margin: 3px 0 1px; font-family: "Fraunces", serif; font-size: 18px; }
 .mission-card p { margin: 0; color: #655e4b; font-size: 12px; line-height: 1.35; }
+.item-legend {
+  position: absolute; top: 14px; right: 14px; display: grid; grid-template-columns: repeat(2, auto); gap: 5px 12px;
+  padding: 8px 11px; color: #5d624e; border: 1px solid rgba(76, 83, 58, .18); border-radius: 12px;
+  background: rgba(255, 253, 246, .88); box-shadow: 0 3px 10px rgba(30, 48, 32, .1); font-size: 10px; font-weight: 800;
+}
+.item-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.item-legend em { color: var(--forest); font-style: normal; font-weight: 900; }
+.legend-icon { display: inline-grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; font-size: 8px; }
+.pancake-icon { color: #8b5929; background: #edbb5e; }
+.leaf-icon { color: #e9f5ae; background: #75a94e; transform: rotate(45deg); }
+.scroll-icon { color: #487053; border-radius: 3px; background: #f1dfaa; font-size: 7px; }
+.gold-icon { color: #fff5a9; background: #e3b62c; box-shadow: 0 0 8px #ffe56b; }
 
 .toast {
   position: absolute; top: 92px; left: 50%; padding: 9px 15px; opacity: 0;
@@ -66,6 +78,16 @@ canvas { display: block; width: 100%; height: 100%; }
   pointer-events: none; transform: translate(-50%, -10px); transition: .25s ease;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+.story-beat {
+  position: absolute; left: 42%; top: 45%; opacity: 0; visibility: hidden; color: #fffdf6; text-align: center;
+  pointer-events: none; transform: translate(-50%, -50%) scale(.85); transition: .25s ease;
+}
+.story-beat.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+.story-bubble {
+  display: inline-block; padding: 10px 17px; color: var(--forest); border-radius: 22px; background: #fff5c8;
+  font-family: "Fraunces", serif; font-size: 28px; box-shadow: 0 4px 0 rgba(27,57,42,.2);
+}
+.story-beat p { margin: 9px 0; padding: 6px 11px; border-radius: 999px; background: rgba(13,40,31,.78); font-size: 13px; font-weight: 900; }
 
 .overlay {
   position: absolute; inset: 0; display: grid; place-items: center; padding: 22px;
@@ -98,6 +120,10 @@ button { font: inherit; }
 .final-score { margin: 16px 0 4px; color: #6a604c; }
 .final-score strong { color: var(--gold-deep); font-size: 42px; }
 .end-card > p:last-of-type { margin: 4px auto; max-width: 480px; line-height: 1.45; }
+.result-rank { display: inline-block; margin: 0 0 8px !important; padding: 6px 13px; color: #fffdf6; border-radius: 999px; background: var(--forest); font-size: 13px; font-weight: 900; letter-spacing: .5px; }
+.landmark-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 15px 0 2px; }
+.landmark-badge { padding: 6px 9px; color: #6d624d; border-radius: 999px; background: #eee4cf; font-size: 10px; font-weight: 900; }
+.landmark-badge.found { color: #fffdf6; background: #4c765a; }
 
 .touch-controls { display: none; position: absolute; left: 16px; bottom: 16px; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(2, 54px); gap: 4px; }
 .touch-controls button { border: 1px solid rgba(255,255,255,.4); border-radius: 14px; color: #fff; background: rgba(13, 40, 31, .66); font-size: 18px; touch-action: none; }
@@ -110,6 +136,8 @@ button { font: inherit; }
 @media (pointer: coarse), (max-width: 760px) {
   .touch-controls { display: grid; }
   .mission-card { display: none; }
+  .item-legend { top: auto; right: 7px; bottom: 7px; grid-template-columns: auto; gap: 2px; padding: 5px 7px; font-size: 8px; }
+  .legend-icon { width: 13px; height: 13px; font-size: 6px; }
   .game-shell { padding: 8px; }
   .game-frame { border-width: 4px; border-radius: 16px; }
   .hud { top: 7px; left: 7px; gap: 4px; }
@@ -121,4 +149,3 @@ button { font: inherit; }
   .how-to div { padding: 8px 4px; }
   .touch-controls { transform: scale(.82); transform-origin: bottom left; }
 }
-
