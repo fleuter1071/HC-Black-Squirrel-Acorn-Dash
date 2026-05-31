@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#173c2d" />
+    <title>SBS: Acorn Dash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">SBS</div>
+          <div>
+            <p class="eyebrow">A Haverford-inspired campus caper</p>
+            <h1>Super Black Squirrel</h1>
+          </div>
+        </div>
+        <button class="icon-button" id="soundButton" type="button" aria-label="Mute sounds" title="Mute sounds">
+          <span id="soundIcon">♪</span>
+        </button>
+      </header>
+
+      <section class="game-frame" aria-label="Super Black Squirrel game">
+        <canvas id="gameCanvas" width="1600" height="1000" aria-label="Top-down campus game board"></canvas>
+
+        <div class="hud">
+          <div class="hud-card score-card">
+            <span class="hud-label">Acorn stash</span>
+            <strong><span id="score">0</span><small> / 24</small></strong>
+          </div>
+          <div class="hud-card timer-card">
+            <span class="hud-label">Reunion clock</span>
+            <strong id="timer">4:00</strong>
+          </div>
+          <div class="hud-card landmark-card">
+            <span class="hud-label">Landmark secrets</span>
+            <strong><span id="secrets">0</span><small> / 5</small></strong>
+          </div>
+        </div>
+
+        <aside class="mission-card" id="missionCard">
+          <span class="mission-kicker">SBS's notebook</span>
+          <strong id="missionTitle">Find the campus stash</strong>
+          <p id="missionText">Sniff around landmark signs for hidden acorns.</p>
+        </aside>
+
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+        <section class="overlay show" id="startOverlay">
+          <div class="overlay-card intro-card">
+            <p class="eyebrow">Class of '96 reunion edition</p>
+            <h2>SBS: Acorn Dash</h2>
+            <p class="lede">Guide SBS across campus, gather his acorn stash, and dodge the daily traffic of students, bikes, and one extremely determined golf cart.</p>
+            <div class="how-to">
+              <div><span class="key-cluster">WASD</span><strong>or arrow keys</strong><small>Scurry around campus</small></div>
+              <div><span class="acorn-demo">♠</span><strong>Find acorns</strong><small>Explore landmark signs for secret ones</small></div>
+              <div><span class="hazard-demo">!</span><strong>Stay nimble</strong><small>A bump spills one acorn</small></div>
+            </div>
+            <button class="primary-button" id="startButton" type="button">Start scurrying</button>
+            <p class="fine-print">Unofficial alumni-made game inspired by Haverford College.</p>
+          </div>
+        </section>
+
+        <section class="overlay" id="endOverlay">
+          <div class="overlay-card end-card">
+            <p class="eyebrow">The sun sets over Founders Green</p>
+            <h2 id="endTitle">A noble stash!</h2>
+            <p class="final-score"><strong id="finalScore">0</strong> acorns collected</p>
+            <p id="endMessage"></p>
+            <div class="button-row">
+              <button class="primary-button" id="restartButton" type="button">Scurry again</button>
+              <button class="secondary-button" id="shareButton" type="button">Share score</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="touch-controls" aria-label="Touch movement controls">
+          <button data-dir="up" aria-label="Move up">▲</button>
+          <button data-dir="left" aria-label="Move left">◀</button>
+          <button data-dir="down" aria-label="Move down">▼</button>
+          <button data-dir="right" aria-label="Move right">▶</button>
+        </div>
+      </section>
+
+      <footer class="footer-note">
+        <span>Explore a playful, simplified campus inspired by the real map.</span>
+        <span class="footer-dot">•</span>
+        <span>Built for reunion friends and fellow Fords.</span>
+      </footer>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
+

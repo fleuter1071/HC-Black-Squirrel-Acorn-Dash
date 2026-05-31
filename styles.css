@@ -1,0 +1,124 @@
+:root {
+  --forest: #173c2d;
+  --forest-deep: #0d281f;
+  --cream: #fbf6e9;
+  --paper: #fffdf6;
+  --gold: #e7ad45;
+  --gold-deep: #b96e22;
+  --ink: #20322d;
+  --red: #b64832;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background: #e7e0cf;
+  background-image: radial-gradient(#d3c8b1 1px, transparent 1px);
+  background-size: 18px 18px;
+  font-family: "Nunito", system-ui, sans-serif;
+}
+
+.game-shell { max-width: 1440px; margin: 0 auto; padding: 16px; }
+
+.topbar, .brand, .button-row { display: flex; align-items: center; }
+.topbar { justify-content: space-between; margin-bottom: 12px; }
+.brand { gap: 12px; }
+.brand-mark {
+  display: grid; width: 56px; height: 56px; place-items: center;
+  color: var(--cream); border-radius: 16px; background: var(--forest);
+  font-family: "Fraunces", serif; font-size: 18px; box-shadow: 0 5px 0 #b7aa8f;
+}
+.eyebrow { margin: 0 0 2px; color: #6c654f; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; }
+h1, h2 { margin: 0; color: var(--forest); font-family: "Fraunces", Georgia, serif; line-height: 1; }
+h1 { font-size: clamp(22px, 3vw, 34px); }
+h2 { font-size: clamp(38px, 7vw, 68px); }
+
+.icon-button {
+  width: 48px; height: 48px; color: var(--forest); border: 2px solid #bdb297;
+  border-radius: 50%; background: #fffaf0; font-size: 24px; cursor: pointer;
+}
+.game-frame {
+  position: relative; aspect-ratio: 16 / 10; overflow: hidden;
+  border: 7px solid #fffaf0; border-radius: 22px; background: #8eb17a;
+  box-shadow: 0 14px 34px rgba(48, 55, 35, .2), 0 0 0 2px #b8ad94;
+}
+canvas { display: block; width: 100%; height: 100%; }
+
+.hud { position: absolute; top: 14px; left: 14px; display: flex; gap: 8px; }
+.hud-card, .mission-card {
+  padding: 9px 13px; color: var(--forest); border: 1px solid rgba(76, 83, 58, .22);
+  border-radius: 12px; background: rgba(255, 253, 246, .91); box-shadow: 0 3px 10px rgba(30, 48, 32, .12);
+}
+.hud-card { min-width: 112px; }
+.hud-label, .mission-kicker { display: block; color: #73694d; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.hud-card strong { font-size: 22px; }
+.hud-card small { font-size: 13px; }
+.mission-card { position: absolute; right: 14px; bottom: 14px; width: min(265px, 35%); }
+.mission-card strong { display: block; margin: 3px 0 1px; font-family: "Fraunces", serif; font-size: 18px; }
+.mission-card p { margin: 0; color: #655e4b; font-size: 12px; line-height: 1.35; }
+
+.toast {
+  position: absolute; top: 92px; left: 50%; padding: 9px 15px; opacity: 0;
+  color: #fffdf6; border-radius: 999px; background: var(--forest); font-size: 13px; font-weight: 900;
+  pointer-events: none; transform: translate(-50%, -10px); transition: .25s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 22px;
+  opacity: 0; visibility: hidden; background: rgba(13, 40, 31, .68); backdrop-filter: blur(4px); transition: .25s ease;
+}
+.overlay.show { opacity: 1; visibility: visible; }
+.overlay-card {
+  width: min(690px, 100%); padding: clamp(22px, 4vw, 42px); text-align: center;
+  border: 3px solid #eee1c6; border-radius: 24px; background: #fffaf0;
+  box-shadow: 0 12px 0 rgba(27, 57, 42, .2);
+}
+.lede { max-width: 570px; margin: 14px auto 18px; color: #536155; line-height: 1.5; }
+.how-to { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.how-to div { padding: 12px 8px; border-radius: 12px; background: #f2ead8; }
+.how-to span, .how-to strong, .how-to small { display: block; }
+.how-to strong { margin-top: 5px; color: var(--forest); font-size: 13px; }
+.how-to small { margin-top: 2px; color: #776d57; font-size: 11px; line-height: 1.25; }
+.key-cluster, .acorn-demo, .hazard-demo { min-height: 25px; color: var(--gold-deep); font-size: 20px; font-weight: 900; }
+.key-cluster { padding-top: 4px; font-size: 14px; letter-spacing: 1px; }
+.hazard-demo { display: inline-grid !important; width: 24px; height: 24px; place-items: center; margin: auto; color: #fff; border-radius: 50%; background: var(--red); font-size: 15px; }
+
+button { font: inherit; }
+.primary-button, .secondary-button {
+  padding: 12px 20px; border-radius: 999px; font-size: 15px; font-weight: 900; cursor: pointer;
+}
+.primary-button { color: #fffdf6; border: 0; background: var(--forest); box-shadow: 0 4px 0 #0b241b; }
+.secondary-button { color: var(--forest); border: 2px solid #c8b997; background: transparent; }
+.button-row { justify-content: center; gap: 10px; margin-top: 20px; }
+.fine-print { margin: 18px 0 0; color: #92866e; font-size: 10px; }
+.final-score { margin: 16px 0 4px; color: #6a604c; }
+.final-score strong { color: var(--gold-deep); font-size: 42px; }
+.end-card > p:last-of-type { margin: 4px auto; max-width: 480px; line-height: 1.45; }
+
+.touch-controls { display: none; position: absolute; left: 16px; bottom: 16px; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(2, 54px); gap: 4px; }
+.touch-controls button { border: 1px solid rgba(255,255,255,.4); border-radius: 14px; color: #fff; background: rgba(13, 40, 31, .66); font-size: 18px; touch-action: none; }
+.touch-controls [data-dir="up"] { grid-column: 2; }
+.touch-controls [data-dir="left"] { grid-column: 1; grid-row: 2; }
+.touch-controls [data-dir="down"] { grid-column: 2; grid-row: 2; }
+.touch-controls [data-dir="right"] { grid-column: 3; grid-row: 2; }
+.footer-note { display: flex; justify-content: center; gap: 8px; padding: 15px; color: #736c5d; font-size: 12px; text-align: center; }
+
+@media (pointer: coarse), (max-width: 760px) {
+  .touch-controls { display: grid; }
+  .mission-card { display: none; }
+  .game-shell { padding: 8px; }
+  .game-frame { border-width: 4px; border-radius: 16px; }
+  .hud { top: 7px; left: 7px; gap: 4px; }
+  .hud-card { min-width: 0; padding: 6px 8px; }
+  .hud-label { font-size: 8px; letter-spacing: .5px; }
+  .hud-card strong { font-size: 16px; }
+  .hud-card small { font-size: 10px; }
+  .how-to { gap: 5px; }
+  .how-to div { padding: 8px 4px; }
+  .touch-controls { transform: scale(.82); transform-origin: bottom left; }
+}
+
