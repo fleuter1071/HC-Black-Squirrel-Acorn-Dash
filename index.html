@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#173c2d" />
     <title>SBS: Acorn Dash</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -66,6 +66,15 @@
             <span data-landmark="campus">Center</span>
           </div>
         </aside>
+        <div class="mobile-destination" id="mobileDestination">Next stop: Lloyd</div>
+        <button class="mobile-help-button" id="helpButton" type="button" aria-expanded="false" aria-controls="mobileHelp" aria-label="Show pickup guide">?</button>
+        <aside class="mobile-help" id="mobileHelp" aria-label="Mobile pickup guide">
+          <strong>Campus pickups</strong>
+          <span><b class="legend-icon pancake-icon">●</b> Pancake: speed boost</span>
+          <span><b class="legend-icon leaf-icon">◆</b> Leaf: reveal secrets</span>
+          <span><b class="legend-icon scroll-icon">HC</b> Scroll: bump shield</span>
+          <span><b class="legend-icon gold-icon">●</b> Gold acorn: +3 points</span>
+        </aside>
 
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
         <div class="countdown" id="countdown" aria-live="assertive"></div>
@@ -91,11 +100,12 @@
             <p class="title-tagline">A very serious arboretum emergency</p>
             <p class="lede">Guide SBS across campus, gather his acorn stash, and dodge the daily traffic of students, bikes, and one extremely determined golf cart.</p>
             <div class="how-to">
-              <div><span class="key-cluster">WASD</span><strong>or arrow keys</strong><small>Scurry around campus</small></div>
+              <div><span class="key-cluster desktop-instruction">WASD</span><span class="joystick-demo mobile-instruction">◎</span><strong class="desktop-instruction">or arrow keys</strong><strong class="mobile-instruction">Drag the joystick</strong><small>Scurry around campus</small></div>
               <div><span class="acorn-demo">♠</span><strong>Find acorns</strong><small>Explore landmark signs for secret ones</small></div>
               <div><span class="hazard-demo">!</span><strong>Stay nimble</strong><small>A bump spills one acorn</small></div>
             </div>
             <button class="primary-button" id="startButton" type="button">Start scurrying</button>
+            <p class="rotate-note">Phone tip: turn sideways for the best campus view.</p>
             <p class="fine-print">Unofficial alumni-made game inspired by Haverford College.</p>
           </div>
         </section>
@@ -130,12 +140,18 @@
           </div>
         </section>
 
-        <div class="touch-controls" aria-label="Touch movement controls">
-          <button data-dir="up" aria-label="Move up">▲</button>
-          <button data-dir="left" aria-label="Move left">◀</button>
-          <button data-dir="down" aria-label="Move down">▼</button>
-          <button data-dir="right" aria-label="Move right">▶</button>
+        <div class="joystick" id="joystick" aria-label="Drag to move SBS">
+          <div class="joystick-ring">
+            <div class="joystick-thumb" id="joystickThumb"></div>
+          </div>
         </div>
+        <section class="pause-overlay" id="pauseOverlay">
+          <div>
+            <strong>Campus stroll paused</strong>
+            <p>SBS waited while you were away.</p>
+            <button class="primary-button" id="resumeButton" type="button">Tap to resume</button>
+          </div>
+        </section>
       </section>
 
       <footer class="footer-note">

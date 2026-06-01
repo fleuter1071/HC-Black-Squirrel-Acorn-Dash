@@ -11,6 +11,8 @@ const GOLDEN_ACORN_VALUE = 3;
 const POWERUP_INTERVAL = 24;
 const POWERUP_LIFETIME = 14;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
+const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const missionTemplates = [
   { id:"five", chapters:[0,1,2,3], title:"Five-acorn flurry", text:"Collect 5 acorns before the notebook timer runs out.", duration:22, goal:5, bonus:4 },
   { id:"founders", chapters:[1,2], title:"Founders dash", text:"Reach the hidden stash near Founders before time runs out.", duration:25, landmark:"founders", bonus:5 },
@@ -77,11 +79,13 @@ let toastTimer;
 let storyTimer;
 let countdownTimer;
 const keys = new Set();
+const joystick = { x:0, y:0, pointerId:null };
 
 function newState() {
   return {
-    running: false, ended: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, missionsDone:0, chapterIndex:0, presentationTime:0, introCamera:0,
+    running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, missionsDone:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
     player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, moving:false },
+    camera: { x:690, y:560 },
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
@@ -96,7 +100,12 @@ function startGame() {
   const muted = state?.muted || false;
   state = newState();
   state.muted = muted;
-  state.introCamera=2.8;
+  state.introCameraDuration=reducedMotionQuery.matches ? .2 : isMobileView() ? 2 : 2.8;
+  state.introCamera=state.introCameraDuration;
+  resetJoystick();
+  document.getElementById("pauseOverlay").classList.remove("show");
+  document.getElementById("mobileHelp").classList.remove("show");
+  document.getElementById("helpButton").setAttribute("aria-expanded","false");
   showDefaultNotebook();
   document.getElementById("startOverlay").classList.remove("show");
   document.getElementById("endOverlay").classList.remove("show","postcard-reveal");
@@ -112,12 +121,15 @@ function startGame() {
     document.getElementById("gameFrame").classList.remove("cinematic");
     document.getElementById("campusGlide").classList.remove("show");
     runCountdown();
-  },2800);
+  },state.introCameraDuration*1000);
   updateHud();
 }
 
 function endGame() {
   state.running = false; state.ended = true;
+  resetJoystick();
+  document.getElementById("mobileHelp").classList.remove("show");
+  document.getElementById("helpButton").setAttribute("aria-expanded","false");
   const bests=savePersonalBests();
   const allSecrets = state.secrets === landmarks.length;
   const title = state.score >= TARGET_ACORNS ? "Legend of Founders Green!" : state.score >= 14 ? "A noble stash!" : "A respectable scurry!";
@@ -162,8 +174,8 @@ function update(dt) {
   state.hintLife=Math.max(0,state.hintLife-dt);
   updateMission(dt);
 
-  const dx = (keys.has("arrowright") || keys.has("d") ? 1 : 0) - (keys.has("arrowleft") || keys.has("a") ? 1 : 0);
-  const dy = (keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0);
+  const dx = clamp((keys.has("arrowright") || keys.has("d") ? 1 : 0) - (keys.has("arrowleft") || keys.has("a") ? 1 : 0)+joystick.x,-1,1);
+  const dy = clamp((keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0)+joystick.y,-1,1);
   state.player.moving = Boolean(dx || dy);
   const mag = Math.hypot(dx, dy)||1;
   const speed = PLAYER_SPEED * (state.activePowerups.pancake > 0 ? 1.48 : 1);
@@ -171,6 +183,7 @@ function update(dt) {
   const ease=1-Math.exp(-(dx||dy?13:18)*dt);
   state.player.vx+=(targetVx-state.player.vx)*ease;state.player.vy+=(targetVy-state.player.vy)*ease;
   state.player.x=clamp(state.player.x+state.player.vx*dt,28,WORLD.width-28);state.player.y=clamp(state.player.y+state.player.vy*dt,28,WORLD.height-28);
+  updateMobileCamera(dt);
   if(Math.abs(state.player.vx)>.5)state.player.facing=Math.sign(state.player.vx);
   if(Math.hypot(state.player.vx,state.player.vy)>8)state.player.bob+=dt*13;
   state.player.invulnerable = Math.max(0, state.player.invulnerable - dt);
@@ -388,7 +401,7 @@ function collectSpill(acorn) {
 function bump(hazard) {
   state.player.invulnerable = 1.75;
   state.player.spin = hazard.type === "cart" ? .95 : .55;
-  state.shake = hazard.type === "cart" ? .48 : .18;
+  state.shake = reducedMotionQuery.matches ? 0 : hazard.type === "cart" ? .48 : .18;
   state.combo=0;state.comboWindow=0;
   const lost = state.score > 0 ? 1 : 0;
   state.score -= lost;
@@ -445,15 +458,52 @@ function draw() {
 }
 
 function applyOpeningCamera() {
-  if(!state.introCamera)return;
-  const progress=1-state.introCamera/2.8;
+  if(!state.introCamera){applyMobileCamera();return;}
+  const progress=1-state.introCamera/state.introCameraDuration;
   const eased=1-Math.pow(1-progress,3);
-  const zoom=1.2-(.2*eased);
+  const startZoom=isMobileView()?Math.max(1.2,canvas.width/WORLD.width,canvas.height/WORLD.height):1.2;
+  const endZoom=isMobileView()?getMobileZoom():1;
+  const zoom=startZoom+(endZoom-startZoom)*eased;
   const focusX=955+(state.player.x-955)*eased;
   const focusY=420+(state.player.y-420)*eased;
-  ctx.translate(WORLD.width/2,WORLD.height/2);
+  applyWorldCamera(focusX,focusY,zoom);
+}
+
+function isMobileView() {
+  return mobileQuery.matches;
+}
+
+function getMobileZoom() {
+  const preferred=window.innerHeight>window.innerWidth?2.18:1.72;
+  return Math.max(preferred,canvas.width/WORLD.width,canvas.height/WORLD.height);
+}
+
+function updateMobileCamera(dt) {
+  if(!isMobileView())return;
+  const ease=1-Math.exp(-7*dt);
+  state.camera.x+=(state.player.x-state.camera.x)*ease;
+  state.camera.y+=(state.player.y-state.camera.y)*ease;
+}
+
+function applyMobileCamera() {
+  if(!isMobileView())return;
+  const zoom=getMobileZoom();
+  applyWorldCamera(state.camera.x,state.camera.y,zoom);
+}
+
+function applyWorldCamera(x,y,zoom) {
+  const halfW=canvas.width/(2*zoom),halfH=canvas.height/(2*zoom);
+  const focusX=clamp(x,halfW,WORLD.width-halfW);
+  const focusY=clamp(y,halfH,WORLD.height-halfH);
+  ctx.translate(canvas.width/2,canvas.height/2);
   ctx.scale(zoom,zoom);
   ctx.translate(-focusX,-focusY);
+}
+
+function resizeCanvasForViewport() {
+  if(!isMobileView()){canvas.width=WORLD.width;canvas.height=WORLD.height;return;}
+  const frame=document.getElementById("gameFrame"),ratio=frame.clientWidth/frame.clientHeight||1;
+  canvas.width=1200;canvas.height=Math.round(1200/ratio);
 }
 
 function drawCampus() {
@@ -705,7 +755,7 @@ function runCountdown() {
   clearInterval(countdownTimer);el.classList.add("show");el.textContent=steps[i];
   countdownTimer=setInterval(()=>{
     i++;
-    if(i===steps.length){clearInterval(countdownTimer);el.classList.remove("show");state.running=true;state.hintLife=7;showToast("Follow the pulsing acorn to start!");playSound("start");return;}
+    if(i===steps.length){clearInterval(countdownTimer);el.classList.remove("show");state.running=true;state.hintLife=7;if(document.hidden)pauseForBackground();showToast("Follow the pulsing acorn to start!");playSound("start");return;}
     el.textContent=steps[i];playTone(steps[i]==="SCURRY!"?720:440,.08,"square");
   },650);
 }
@@ -878,8 +928,35 @@ function roundRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 
+function resetJoystick() {
+  joystick.x=0;joystick.y=0;joystick.pointerId=null;
+  document.getElementById("joystickThumb").style.transform="translate(0, 0)";
+}
+
+function updateJoystick(event) {
+  const ring=document.querySelector(".joystick-ring"),rect=ring.getBoundingClientRect();
+  const max=rect.width*.31,dx=event.clientX-(rect.left+rect.width/2),dy=event.clientY-(rect.top+rect.height/2);
+  const distanceFromCenter=Math.hypot(dx,dy),scale=distanceFromCenter>max?max/distanceFromCenter:1;
+  const x=dx*scale,y=dy*scale,deadZone=max*.16;
+  joystick.x=Math.abs(x)<deadZone?0:x/max;joystick.y=Math.abs(y)<deadZone?0:y/max;
+  document.getElementById("joystickThumb").style.transform=`translate(${x}px, ${y}px)`;
+}
+
+function pauseForBackground() {
+  if(!state.running||state.ended)return;
+  state.running=false;state.paused=true;resetJoystick();
+  document.getElementById("pauseOverlay").classList.add("show");
+}
+
+function resumeGame() {
+  if(!state.paused)return;
+  state.paused=false;state.running=true;
+  document.getElementById("pauseOverlay").classList.remove("show");
+}
+
 function updateHud(){
   document.getElementById("score").textContent=state.score;document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
+  const chapter=trailChapters[state.chapterIndex];document.getElementById("mobileDestination").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
   document.getElementById("combo").textContent=state.combo;document.getElementById("comboCard").classList.toggle("hot",state.combo>=3);
   const s=Math.ceil(state.timeLeft);document.getElementById("timer").textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
   document.querySelector(".timer-card").classList.toggle("urgent",state.running&&state.timeLeft<=30);
@@ -908,7 +985,16 @@ function frame(t){const dt=Math.min((t-lastTime)/1000,.05)||0;lastTime=t;update(
 
 window.addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
-document.querySelectorAll(".touch-controls button").forEach(btn=>{const key={up:"arrowup",down:"arrowdown",left:"arrowleft",right:"arrowright"}[btn.dataset.dir];const on=e=>{e.preventDefault();keys.add(key)};const off=e=>{e.preventDefault();keys.delete(key)};btn.addEventListener("pointerdown",on);btn.addEventListener("pointerup",off);btn.addEventListener("pointerleave",off);});
+const joystickEl=document.getElementById("joystick");
+joystickEl.addEventListener("pointerdown",event=>{event.preventDefault();joystick.pointerId=event.pointerId;joystickEl.setPointerCapture(event.pointerId);updateJoystick(event);});
+joystickEl.addEventListener("pointermove",event=>{if(event.pointerId===joystick.pointerId)updateJoystick(event);});
+["pointerup","pointercancel","lostpointercapture"].forEach(type=>joystickEl.addEventListener(type,event=>{if(event.pointerId===joystick.pointerId)resetJoystick();}));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseForBackground();});
+document.getElementById("resumeButton").addEventListener("click",resumeGame);
+document.getElementById("helpButton").addEventListener("click",()=>{
+  const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
+  help.classList.toggle("show",show);document.getElementById("helpButton").setAttribute("aria-expanded",show);
+});
 document.getElementById("startButton").addEventListener("click",startGame);
 document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
@@ -917,4 +1003,6 @@ document.getElementById("whatsappButton").addEventListener("click",()=>window.op
 document.getElementById("shareButton").addEventListener("click",async()=>{const text=getShareText();try{if(navigator.share)await navigator.share({title:"SBS: Acorn Dash",text});else{await navigator.clipboard.writeText(text);showToast("Classmate challenge copied!");}}catch{}});
 document.getElementById("copyButton").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(getShareText());showToast("Challenge link copied!");}catch{}});
 
+resizeCanvasForViewport();
+window.addEventListener("resize",resizeCanvasForViewport);
 state=newState();updateHud();requestAnimationFrame(frame);
