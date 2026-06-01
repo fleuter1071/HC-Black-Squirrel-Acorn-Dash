@@ -2,7 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const WORLD = { width: 1600, height: 1000 };
-const GAME_SECONDS = 240;
+const GAME_SECONDS = 120;
 const TARGET_ACORNS = 24;
 const PLAYER_SPEED = 265;
 const GOLDEN_ACORN_INTERVAL = 30;
@@ -92,7 +92,7 @@ function newState() {
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null,
-    activePowerups: { pancake:0, leaf:0, scroll:0 }, nextGoldenAt: 72, nextPowerupAt: 48, nextAmbientAt: 8, nextDuckAt:18, nextMissionAt:12, hornReady:true, mission:null, missionIndex:0, elapsed: 0,
+    activePowerups: { pancake:0, leaf:0, scroll:0 }, nextGoldenAt: 46, nextPowerupAt: 28, nextAmbientAt: 8, nextDuckAt:18, nextMissionAt:10, hornReady:true, mission:null, missionIndex:0, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
   };
