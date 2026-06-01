@@ -80,6 +80,8 @@ let storyTimer;
 let countdownTimer;
 const keys = new Set();
 const joystick = { x:0, y:0, pointerId:null };
+let portraitBypass = false;
+let orientationGateEnabled = false;
 
 function newState() {
   return {
@@ -504,6 +506,22 @@ function resizeCanvasForViewport() {
   if(!isMobileView()){canvas.width=WORLD.width;canvas.height=WORLD.height;return;}
   const frame=document.getElementById("gameFrame"),ratio=frame.clientWidth/frame.clientHeight||1;
   canvas.width=1200;canvas.height=Math.round(1200/ratio);
+}
+
+async function requestMobileFullscreen() {
+  if(!isMobileView())return;
+  orientationGateEnabled=true;
+  const root=document.documentElement;
+  try{if(!document.fullscreenElement&&root.requestFullscreen)await root.requestFullscreen({navigationUI:"hide"});}catch{}
+  try{if(screen.orientation?.lock)await screen.orientation.lock("landscape");}catch{}
+  document.body.classList.add("mobile-play");
+  refreshOrientationGate();
+  resizeCanvasForViewport();
+}
+
+function refreshOrientationGate() {
+  const portrait=isMobileView()&&window.innerHeight>window.innerWidth;
+  document.getElementById("orientationOverlay").classList.toggle("show",orientationGateEnabled&&portrait&&!portraitBypass);
 }
 
 function drawCampus() {
@@ -991,11 +1009,14 @@ joystickEl.addEventListener("pointermove",event=>{if(event.pointerId===joystick.
 ["pointerup","pointercancel","lostpointercapture"].forEach(type=>joystickEl.addEventListener(type,event=>{if(event.pointerId===joystick.pointerId)resetJoystick();}));
 document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseForBackground();});
 document.getElementById("resumeButton").addEventListener("click",resumeGame);
+document.getElementById("fullscreenButton").addEventListener("click",requestMobileFullscreen);
+document.getElementById("fullscreenGateButton").addEventListener("click",requestMobileFullscreen);
+document.getElementById("portraitContinueButton").addEventListener("click",()=>{portraitBypass=true;refreshOrientationGate();});
 document.getElementById("helpButton").addEventListener("click",()=>{
   const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
   help.classList.toggle("show",show);document.getElementById("helpButton").setAttribute("aria-expanded",show);
 });
-document.getElementById("startButton").addEventListener("click",startGame);
+document.getElementById("startButton").addEventListener("click",()=>{requestMobileFullscreen();startGame();});
 document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
 function getShareText(){return `Can you beat my SBS reunion score? I earned the ${getRank()} title with ${state.score} points and ${state.secrets}/5 campus secrets in SBS: Acorn Dash. My best moment: ${getBestMoment()} ${location.href}`;}
@@ -1004,5 +1025,7 @@ document.getElementById("shareButton").addEventListener("click",async()=>{const 
 document.getElementById("copyButton").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(getShareText());showToast("Challenge link copied!");}catch{}});
 
 resizeCanvasForViewport();
-window.addEventListener("resize",resizeCanvasForViewport);
+refreshOrientationGate();
+window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();});
+screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();});
 state=newState();updateHud();requestAnimationFrame(frame);

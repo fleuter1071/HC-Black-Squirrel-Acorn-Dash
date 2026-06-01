@@ -67,6 +67,7 @@
           </div>
         </aside>
         <div class="mobile-destination" id="mobileDestination">Next stop: Lloyd</div>
+        <div class="mobile-play-tip">Drag the joystick • Follow glowing acorns • Dodge traffic</div>
         <button class="mobile-help-button" id="helpButton" type="button" aria-expanded="false" aria-controls="mobileHelp" aria-label="Show pickup guide">?</button>
         <aside class="mobile-help" id="mobileHelp" aria-label="Mobile pickup guide">
           <strong>Campus pickups</strong>
@@ -105,6 +106,7 @@
               <div><span class="hazard-demo">!</span><strong>Stay nimble</strong><small>A bump spills one acorn</small></div>
             </div>
             <button class="primary-button" id="startButton" type="button">Start scurrying</button>
+            <button class="secondary-button fullscreen-button" id="fullscreenButton" type="button">Play full screen</button>
             <p class="rotate-note">Phone tip: turn sideways for the best campus view.</p>
             <p class="fine-print">Unofficial alumni-made game inspired by Haverford College.</p>
           </div>
@@ -151,6 +153,13 @@
             <p>SBS waited while you were away.</p>
             <button class="primary-button" id="resumeButton" type="button">Tap to resume</button>
           </div>
+        </section>
+        <section class="orientation-overlay" id="orientationOverlay">
+          <div class="phone-turn" aria-hidden="true">↻</div>
+          <strong>Turn your phone sideways</strong>
+          <p>SBS needs a wider view of campus. Rotate to landscape, then drag the joystick to scurry.</p>
+          <button class="primary-button" id="fullscreenGateButton" type="button">Play full screen</button>
+          <button class="secondary-button compact-button" id="portraitContinueButton" type="button">Continue in portrait</button>
         </section>
       </section>
 
