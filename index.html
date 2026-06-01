@@ -25,28 +25,28 @@
         </button>
       </header>
 
-      <section class="game-frame" aria-label="Super Black Squirrel game">
+      <section class="game-frame" id="gameFrame" aria-label="Super Black Squirrel game">
         <canvas id="gameCanvas" width="1600" height="1000" aria-label="Top-down campus game board"></canvas>
 
         <div class="hud">
           <div class="hud-card score-card">
-            <span class="hud-label">Acorn stash</span>
-            <strong><span id="score">0</span><small> / 24</small></strong>
+            <span class="hud-label">Score</span>
+            <strong><span id="score">0</span><small> pts</small></strong>
           </div>
           <div class="hud-card timer-card">
-            <span class="hud-label">Reunion clock</span>
+            <span class="hud-label">Time left</span>
             <strong id="timer">4:00</strong>
           </div>
-          <div class="hud-card landmark-card">
-            <span class="hud-label">Landmark secrets</span>
-            <strong><span id="secrets">0</span><small> / 5</small></strong>
+          <div class="hud-card combo-card" id="comboCard">
+            <span class="hud-label">Streak</span>
+            <strong><span id="combo">0</span><small>x</small></strong>
           </div>
         </div>
 
         <aside class="mission-card" id="missionCard">
           <span class="mission-kicker">SBS's notebook</span>
-          <strong id="missionTitle">Find the campus stash</strong>
-          <p id="missionText">Sniff around landmark signs for hidden acorns.</p>
+          <strong id="missionTitle">Next stop: Lloyd</strong>
+          <p id="missionText">Follow the glowing acorn trail from the DC toward Lloyd.</p>
         </aside>
 
         <aside class="item-legend" aria-label="Campus pickup guide">
@@ -56,7 +56,23 @@
           <span><b class="legend-icon gold-icon">●</b><em>gold acorn</em> +3</span>
         </aside>
 
+        <aside class="tour-card" aria-label="Campus tour progress">
+          <span class="tour-kicker" id="tourKicker">Campus secrets 0 / 5</span>
+          <div class="tour-stops">
+            <span data-landmark="dc">DC</span>
+            <span data-landmark="lloyd">Lloyd</span>
+            <span data-landmark="founders">Founders</span>
+            <span data-landmark="barclay">Barclay</span>
+            <span data-landmark="campus">Center</span>
+          </div>
+        </aside>
+
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        <div class="countdown" id="countdown" aria-live="assertive"></div>
+        <div class="campus-glide" id="campusGlide" aria-hidden="true">
+          <span>Haverford College</span>
+          <strong>SBS territory</strong>
+        </div>
 
         <section class="story-beat" id="storyBeat" aria-live="polite">
           <div class="story-bubble">Oh, nuts!</div>
@@ -65,8 +81,14 @@
 
         <section class="overlay show" id="startOverlay">
           <div class="overlay-card intro-card">
+            <div class="title-scene" aria-hidden="true">
+              <div class="title-founders"><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="title-squirrel"><i></i><b>SBS</b></div>
+              <div class="title-acorn">♠</div>
+            </div>
             <p class="eyebrow">Class of '96 reunion edition</p>
             <h2>SBS: Acorn Dash</h2>
+            <p class="title-tagline">A very serious arboretum emergency</p>
             <p class="lede">Guide SBS across campus, gather his acorn stash, and dodge the daily traffic of students, bikes, and one extremely determined golf cart.</p>
             <div class="how-to">
               <div><span class="key-cluster">WASD</span><strong>or arrow keys</strong><small>Scurry around campus</small></div>
@@ -80,15 +102,30 @@
 
         <section class="overlay" id="endOverlay">
           <div class="overlay-card end-card">
+            <div class="postcard-topline">
+              <span>Greetings from Haverford</span>
+              <b>HC '96</b>
+            </div>
+            <div class="postcard-stamp" aria-hidden="true">SBS<br><small>REUNION</small></div>
             <p class="eyebrow">The sun sets over Founders Green</p>
             <h2 id="endTitle">A noble stash!</h2>
             <p class="final-score"><strong id="finalScore">0</strong> acorns collected</p>
             <p class="result-rank" id="resultRank">Founders Green Forager</p>
+            <div class="result-stats">
+              <span><b id="finalSecrets">0 / 5</b> campus secrets</span>
+              <span><b id="finalCombo">0x</b> best scurry streak</span>
+              <span><b id="personalBest">0</b> personal best</span>
+            </div>
+            <p class="best-moment" id="bestMoment">Best moment: ready to scurry.</p>
             <p id="endMessage"></p>
             <div class="landmark-badges" id="landmarkBadges" aria-label="Discovered landmark badges"></div>
             <div class="button-row">
               <button class="primary-button" id="restartButton" type="button">Scurry again</button>
-              <button class="secondary-button" id="shareButton" type="button">Share score</button>
+              <button class="whatsapp-button" id="whatsappButton" type="button">Share on WhatsApp</button>
+            </div>
+            <div class="share-row">
+              <button class="secondary-button compact-button" id="shareButton" type="button">More sharing options</button>
+              <button class="secondary-button compact-button" id="copyButton" type="button">Copy challenge link</button>
             </div>
           </div>
         </section>
