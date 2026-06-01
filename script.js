@@ -519,6 +519,10 @@ async function requestMobileFullscreen() {
   resizeCanvasForViewport();
 }
 
+function refreshFullscreenButton() {
+  document.getElementById("mobileFullscreenButton").classList.toggle("hidden",Boolean(document.fullscreenElement));
+}
+
 function refreshOrientationGate() {
   const portrait=isMobileView()&&window.innerHeight>window.innerWidth;
   document.getElementById("orientationOverlay").classList.toggle("show",orientationGateEnabled&&portrait&&!portraitBypass);
@@ -1011,6 +1015,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseForBac
 document.getElementById("resumeButton").addEventListener("click",resumeGame);
 document.getElementById("fullscreenButton").addEventListener("click",requestMobileFullscreen);
 document.getElementById("fullscreenGateButton").addEventListener("click",requestMobileFullscreen);
+document.getElementById("mobileFullscreenButton").addEventListener("click",requestMobileFullscreen);
 document.getElementById("portraitContinueButton").addEventListener("click",()=>{portraitBypass=true;refreshOrientationGate();});
 document.getElementById("helpButton").addEventListener("click",()=>{
   const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
@@ -1026,6 +1031,8 @@ document.getElementById("copyButton").addEventListener("click",async()=>{try{awa
 
 resizeCanvasForViewport();
 refreshOrientationGate();
+refreshFullscreenButton();
 window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();});
+document.addEventListener("fullscreenchange",()=>{refreshFullscreenButton();resizeCanvasForViewport();});
 screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();});
 state=newState();updateHud();requestAnimationFrame(frame);
