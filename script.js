@@ -460,14 +460,14 @@ function resizeCanvasForViewport() {
   canvas.width=1200;canvas.height=Math.round(1200/ratio);
 }
 
-async function requestMobileFullscreen() {
+async function requestMobileFullscreen(forceExpand=false) {
   if(!isMobileView())return;
   orientationGateEnabled=true;
   const root=document.documentElement;
   try{if(!document.fullscreenElement&&root.requestFullscreen)await root.requestFullscreen({navigationUI:"hide"});}catch{}
   try{if(screen.orientation?.lock)await screen.orientation.lock("landscape");}catch{}
-  document.body.classList.add("mobile-play");
-  showToast(document.fullscreenElement ? "Full screen enabled." : "Expanded mobile view enabled.");
+  if(forceExpand||document.fullscreenElement)document.body.classList.add("mobile-play");
+  showToast(document.fullscreenElement ? "Full screen enabled." : forceExpand ? "Expanded mobile view enabled." : "Rotate complete. Tap Expand for a bigger view.");
   refreshFullscreenButton();
   refreshOrientationGate();
   resizeCanvasForViewport();
@@ -1043,7 +1043,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseForBac
 document.getElementById("resumeButton").addEventListener("click",resumeGame);
 document.getElementById("fullscreenButton").addEventListener("click",requestMobileFullscreen);
 document.getElementById("fullscreenGateButton").addEventListener("click",requestMobileFullscreen);
-document.getElementById("mobileFullscreenButton").addEventListener("click",requestMobileFullscreen);
+document.getElementById("mobileFullscreenButton").addEventListener("click",()=>requestMobileFullscreen(true));
 document.getElementById("portraitContinueButton").addEventListener("click",()=>{portraitBypass=true;refreshOrientationGate();});
 document.getElementById("helpButton").addEventListener("click",()=>{
   const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
@@ -1060,7 +1060,7 @@ document.getElementById("copyButton").addEventListener("click",async()=>{try{awa
 resizeCanvasForViewport();
 refreshOrientationGate();
 refreshFullscreenButton();
-window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();});
+window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
 document.addEventListener("fullscreenchange",()=>{refreshFullscreenButton();resizeCanvasForViewport();});
-screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();});
+screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
 state=newState();updateHud();requestAnimationFrame(frame);
