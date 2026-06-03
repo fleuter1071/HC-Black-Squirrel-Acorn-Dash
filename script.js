@@ -983,7 +983,7 @@ function resetJoystick() {
 
 function updateJoystick(event) {
   const ring=document.querySelector(".joystick-ring"),rect=ring.getBoundingClientRect();
-  const max=rect.width*.31,dx=event.clientX-(rect.left+rect.width/2),dy=event.clientY-(rect.top+rect.height/2);
+  const max=rect.width*.24,dx=event.clientX-(rect.left+rect.width/2),dy=event.clientY-(rect.top+rect.height/2);
   const distanceFromCenter=Math.hypot(dx,dy),scale=distanceFromCenter>max?max/distanceFromCenter:1;
   const x=dx*scale,y=dy*scale,deadZone=max*.16;
   joystick.x=Math.abs(x)<deadZone?0:x/max;joystick.y=Math.abs(y)<deadZone?0:y/max;
