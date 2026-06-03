@@ -467,12 +467,15 @@ async function requestMobileFullscreen() {
   try{if(!document.fullscreenElement&&root.requestFullscreen)await root.requestFullscreen({navigationUI:"hide"});}catch{}
   try{if(screen.orientation?.lock)await screen.orientation.lock("landscape");}catch{}
   document.body.classList.add("mobile-play");
+  showToast(document.fullscreenElement ? "Full screen enabled." : "Expanded mobile view enabled.");
+  refreshFullscreenButton();
   refreshOrientationGate();
   resizeCanvasForViewport();
 }
 
 function refreshFullscreenButton() {
-  document.getElementById("mobileFullscreenButton").classList.toggle("hidden",Boolean(document.fullscreenElement));
+  const expanded=Boolean(document.fullscreenElement)||document.body.classList.contains("mobile-play");
+  document.getElementById("mobileFullscreenButton").classList.toggle("hidden",expanded);
 }
 
 function refreshOrientationGate() {
@@ -1046,7 +1049,7 @@ document.getElementById("helpButton").addEventListener("click",()=>{
   const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
   help.classList.toggle("show",show);document.getElementById("helpButton").setAttribute("aria-expanded",show);
 });
-document.getElementById("startButton").addEventListener("click",()=>{requestMobileFullscreen();startGame();});
+document.getElementById("startButton").addEventListener("click",()=>{startGame();if(isMobileView()&&!document.fullscreenElement&&!document.body.classList.contains("mobile-play"))showToast("Tap Expand for a bigger mobile view.");});
 document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
 function getShareText(){return `Can you beat my SBS reunion score? I earned the ${getRank()} title with ${state.score} points and ${state.secrets}/5 campus secrets in SBS: Acorn Dash. My best moment: ${getBestMoment()} ${location.href}`;}

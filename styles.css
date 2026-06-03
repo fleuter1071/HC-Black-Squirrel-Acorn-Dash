@@ -251,9 +251,11 @@ button { font: inherit; }
   }
   .mobile-fullscreen-button {
     position: absolute; right: calc(10px + env(safe-area-inset-right)); bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 5;
-    display: grid; width: 46px; height: 46px; place-items: center; color: #fff9d7; border: 2px solid rgba(255,255,255,.5);
-    border-radius: 50%; background: rgba(23,60,45,.86); font-size: 22px; font-weight: 900;
+    display: flex; min-width: 46px; height: 46px; align-items: center; justify-content: center; gap: 5px; padding: 0 12px;
+    color: #fff9d7; border: 2px solid rgba(255,255,255,.5); border-radius: 999px; background: rgba(23,60,45,.86);
+    font-size: 20px; font-weight: 900;
   }
+  .mobile-fullscreen-button span { font-size: 10px; letter-spacing: .3px; text-transform: uppercase; }
   .mobile-fullscreen-button.hidden { display: none; }
   .mobile-help {
     position: absolute; right: calc(62px + env(safe-area-inset-right)); bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 5;
