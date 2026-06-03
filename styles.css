@@ -210,7 +210,7 @@ button { font: inherit; }
   body { overscroll-behavior: none; }
   .desktop-instruction { display: none !important; }
   .mobile-instruction { display: block; }
-  .fullscreen-button { display: inline-block; margin-left: 7px; }
+  .fullscreen-button { display: none; }
   .rotate-note { display: block; margin: 12px 0 -5px; color: #8a7048; font-size: 11px; font-weight: 900; }
   .mission-card { display: none; }
   .item-legend { display: none; }

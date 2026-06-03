@@ -41,3 +41,56 @@ Session notes will be appended here as the game evolves.
 - Next steps
   - Run a mobile QA pass focused on viewport framing, duck pond visibility, hazard readability, and simplified notebook clarity.
   - Implement the powerup visual upgrade pass as a visual-only change in `drawPowerup`.
+
+## 2026-06-02 - Powerup/SBS polish and mobile control/expand fixes
+
+- Date/time
+  - 2026-06-02, America/New_York.
+- Feature name, work name, description, and value provided
+  - Upgraded powerup visuals so the pancake, leaf, and Honor Code scroll more clearly communicate speed, secret reveal, and shield effects.
+  - Made SBS cuter and more readable with a fluffier tail, clearer face, paws, whiskers, and brighter SBS badge.
+  - Zoomed mobile view further out so more campus is visible.
+  - Tightened mobile joystick responsiveness so full movement requires less thumb travel.
+  - Added an in-game mobile `Expand` control and fixed a rotation edge case where iPhone Safari could land in landscape without fullscreen and without an expand option.
+  - Production pushes completed:
+    - `4b66825` (`Polish powerups and SBS visuals`)
+    - `3752782` (`Zoom out mobile campus view further`)
+    - `b0b1ad4` (`Tune mobile joystick responsiveness`)
+    - `2123eb2` (`Tighten mobile joystick control`)
+    - `5c82b97` (`Add mobile expand play control`)
+    - `5bd4a24` (`Fix mobile expand control after rotation`)
+- Files changed
+  - `script.js`
+  - `index.html`
+  - `styles.css`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Refactored powerup rendering into focused helpers: `drawPowerupRing`, `drawPancakePowerup`, `drawLeafPowerup`, and `drawScrollPowerup`.
+  - Updated `drawPlayer` as a visual-only SBS polish pass while preserving movement, collision radius, and powerup behavior.
+  - Mobile zoom constants in `getMobileZoom` were tuned down to portrait `1.04` and landscape `.83`.
+  - Joystick full-input radius in `updateJoystick` was tightened from `.31` originally, to `.24`, then to `.18`; dead-zone ratio stayed proportional at `.16`.
+  - Mobile expand behavior now separates fullscreen/orientation attempts from forced CSS expanded layout using `requestMobileFullscreen(forceExpand=false)`.
+  - The in-game Expand button calls `requestMobileFullscreen(true)` so iPhone Safari users can always force the edge-to-edge mobile layout even when true Fullscreen API support is limited.
+  - `resize` and `screen.orientation` events now refresh expand button visibility to avoid a no-exit/no-expand landscape state.
+- Assumptions
+  - Production remains connected to `origin/main`.
+  - iPhone Safari cannot be relied on for true JavaScript fullscreen on normal pages, so CSS immersive mode is the practical fallback.
+  - Users should be able to start gameplay without fullscreen, then choose Expand from within the game.
+- Known limitations
+  - iPhone Safari true fullscreen remains browser-limited; the game uses an app-like edge-to-edge layout as fallback.
+  - Real-device mobile QA is still recommended for the Expand flow, especially portrait-to-landscape rotation behavior.
+  - Visual QA in the in-app browser was limited earlier by Windows sandbox/browser helper startup issues.
+- Key learnings that you can bring with you to future sessions
+  - Do not hide the mobile Expand button based only on orientation changes; hide it only when true fullscreen or explicit expanded layout is active.
+  - For iPhone Safari, separate "attempt fullscreen/orientation" from "force app-like expanded layout."
+  - Joystick responsiveness is controlled mainly by `max=rect.width*...`; lower values feel tighter without changing player speed.
+  - Important pickups benefit from shared visual language: consistent pickup ring, distinct color identity, and icon-specific meaning.
+- Remaining TODOs
+  - Real-device QA on iPhone Safari:
+    - Start in portrait, tap Play full screen, rotate to landscape, confirm Expand remains available.
+    - Tap Expand in landscape, confirm edge-to-edge play mode activates.
+    - Confirm joystick tightness feels responsive but not twitchy.
+  - Continue visual upgrades with campus landmarks next if further polish is desired.
+- Next steps
+  - Run a focused mobile QA pass on iPhone Safari.
+  - If joystick still feels loose or twitchy, tune `max=rect.width*.18` slightly up or down rather than changing player speed.
