@@ -428,7 +428,7 @@ function isMobileView() {
 }
 
 function getMobileZoom() {
-  const preferred=window.innerHeight>window.innerWidth?1.39:1.1;
+  const preferred=window.innerHeight>window.innerWidth?1.04:.83;
   return Math.max(preferred,canvas.width/WORLD.width,canvas.height/WORLD.height);
 }
 
