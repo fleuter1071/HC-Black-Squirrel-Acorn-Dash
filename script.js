@@ -8,17 +8,13 @@ const PLAYER_SPEED = 265;
 const GOLDEN_ACORN_INTERVAL = 30;
 const GOLDEN_ACORN_LIFETIME = 11;
 const GOLDEN_ACORN_VALUE = 3;
+const FIRST_GOLDEN_ACORN_AT = 60;
 const POWERUP_INTERVAL = 24;
 const POWERUP_LIFETIME = 14;
+const FIRST_POWERUP_AT = 38;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-const missionTemplates = [
-  { id:"five", chapters:[0,1,2,3], title:"Five-acorn flurry", text:"Collect 5 acorns before the notebook timer runs out.", duration:22, goal:5, bonus:4 },
-  { id:"founders", chapters:[1,2], title:"Founders dash", text:"Reach the hidden stash near Founders before time runs out.", duration:25, landmark:"founders", bonus:5 },
-  { id:"dc", chapters:[0], title:"DC detour", text:"Find the Dining Center secret stash before time runs out.", duration:28, landmark:"dc", bonus:5 },
-  { id:"golden", chapters:[1,2,3], title:"Golden opportunity", text:"Catch the golden acorn before it rolls away.", duration:20, bonus:5 }
-];
 
 const landmarks = [
   { id: "dc", name: "Dining Center", short: "THE DC", x: 238, y: 176, w: 235, h: 126, type: "dc", secret: { x: 225, y: 320 }, note: "Late-night pancake machine energy." },
@@ -85,14 +81,14 @@ let orientationGateEnabled = false;
 
 function newState() {
   return {
-    running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, missionsDone:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
+    running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
     player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, moving:false },
     camera: { x:690, y:560 },
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null,
-    activePowerups: { pancake:0, leaf:0, scroll:0 }, nextGoldenAt: 46, nextPowerupAt: 28, nextAmbientAt: 8, nextDuckAt:18, nextMissionAt:10, hornReady:true, mission:null, missionIndex:0, elapsed: 0,
+    activePowerups: { pancake:0, leaf:0, scroll:0 }, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
   };
@@ -174,7 +170,6 @@ function update(dt) {
   state.shake=Math.max(0,state.shake-dt);
   state.landmarkPulse=Math.max(0,state.landmarkPulse-dt);
   state.hintLife=Math.max(0,state.hintLife-dt);
-  updateMission(dt);
 
   const dx = clamp((keys.has("arrowright") || keys.has("d") ? 1 : 0) - (keys.has("arrowleft") || keys.has("a") ? 1 : 0)+joystick.x,-1,1);
   const dy = clamp((keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0)+joystick.y,-1,1);
@@ -199,7 +194,6 @@ function update(dt) {
       showToast("The golden acorn rolled away!");
       state.golden = null;
       state.nextGoldenAt = state.elapsed + GOLDEN_ACORN_INTERVAL;
-      if(state.mission?.id==="golden")expireMission();
     } else if (distance(state.player, state.golden) < 36) collectGoldenAcorn();
   }
   if (!hasSpecialEvent() && state.elapsed >= state.nextPowerupAt) spawnPowerup();
@@ -273,45 +267,6 @@ function updateNearMiss(hazard) {
   if(gap>threshold+55)hazard.nearMissReady=true;
 }
 
-function updateMission(dt) {
-  const pickupDue=state.elapsed>=state.nextGoldenAt||state.elapsed>=state.nextPowerupAt;
-  if(!hasSpecialEvent()&&!pickupDue&&state.chapterIndex<trailChapters.length&&state.elapsed>=state.nextMissionAt){startMission();return;}
-  if(!state.mission)return;
-  state.mission.life-=dt;
-  if(state.mission.life<=0)expireMission();
-  else updateMissionNotebook();
-}
-
-function startMission() {
-  const available=missionTemplates.filter(template=>
-    template.chapters.includes(state.chapterIndex)&&
-    (!template.landmark||!state.hidden.some(acorn=>acorn.landmark.id===template.landmark&&acorn.collected))
-  );
-  const template=available[state.missionIndex%available.length]||missionTemplates[0];state.missionIndex++;
-  state.mission={...template,life:template.duration,progress:0};
-  showToast(`Notebook mission: ${template.title}`);
-  updateMissionNotebook();
-  if(template.id==="golden")spawnGoldenAcorn(true);
-}
-
-function expireMission() {
-  if(state.mission?.id==="golden")state.golden=null;
-  state.mission=null;state.nextMissionAt=state.elapsed+16;showDefaultNotebook();
-}
-
-function completeMission() {
-  if(!state.mission)return;
-  state.score+=state.mission.bonus;state.missionsDone++;addScorePop(state.player.x,state.player.y-38,`MISSION +${state.mission.bonus}`,"#dcff91",21);
-  showToast(`${state.mission.title} complete! +${state.mission.bonus}`);
-  playSound("mission");state.mission=null;state.nextMissionAt=state.elapsed+18;showDefaultNotebook();
-}
-
-function updateMissionNotebook() {
-  document.getElementById("missionTitle").textContent=state.mission.title;
-  const progress=state.mission.id==="five"?` ${state.mission.progress}/${state.mission.goal}.`:"";
-  document.getElementById("missionText").textContent=`${state.mission.text}${progress} ${Math.ceil(state.mission.life)}s`;
-}
-
 function showDefaultNotebook() {
   const chapter=trailChapters[state.chapterIndex];
   document.getElementById("missionTitle").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
@@ -319,7 +274,7 @@ function showDefaultNotebook() {
 }
 
 function hasSpecialEvent() {
-  return Boolean(state.mission||state.golden||state.powerup);
+  return Boolean(state.golden||state.powerup);
 }
 
 function updateTrailChapter() {
@@ -330,7 +285,7 @@ function updateTrailChapter() {
   state.chapterIndex++;
   const next=trailChapters[state.chapterIndex];
   showToast(next?`${chapter.name} complete! Next stop: ${next.destination}.`:"Campus trail complete! Hunt down the remaining secrets.");
-  if(!state.mission)showDefaultNotebook();
+  showDefaultNotebook();
 }
 
 function collectAcorn(acorn) {
@@ -338,7 +293,6 @@ function collectAcorn(acorn) {
   spawnParticles(acorn.x, acorn.y, "#f4c65f");
   addScorePop(acorn.x, acorn.y, `+${points}`, points>1?"#ffe56b":"#fff4b4");
   extendCombo();
-  if(state.mission?.id==="five"){state.mission.progress++;if(state.mission.progress>=state.mission.goal)completeMission();}
   if (acorn.hidden) {
     state.secrets++;
     state.landmarkPulse=.75;
@@ -347,7 +301,6 @@ function collectAcorn(acorn) {
     showToast(`${acorn.landmark.name}: secret stash found!`);
     document.getElementById("missionTitle").textContent = acorn.landmark.name;
     document.getElementById("missionText").textContent = acorn.landmark.note;
-    if(state.mission?.landmark===acorn.landmark.id)completeMission();
     playTone(880, .08, "triangle"); playTone(1175, .14, "triangle", .09);
   } else {playSound("acorn");updateTrailChapter();}
 }
@@ -369,11 +322,11 @@ function collectPowerup() {
   playSound("powerup");
 }
 
-function spawnGoldenAcorn(isMission=false) {
+function spawnGoldenAcorn() {
   const available = goldenSpots.filter(([x,y]) => distance(state.player, {x,y}) > 230);
   const [x,y] = available[Math.floor(Math.random() * available.length)];
   state.golden = { x, y, life:GOLDEN_ACORN_LIFETIME };
-  if(!isMission)showToast("Golden acorn spotted! Follow the pointer!");
+  showToast("Golden acorn spotted! Follow the pointer!");
   playTone(660, .08, "triangle"); playTone(880, .12, "triangle", .1);
 }
 
@@ -389,7 +342,6 @@ function collectGoldenAcorn() {
   showToast(`Golden acorn! +${GOLDEN_ACORN_VALUE} for the stash!`);
   state.reactions.push({ x:state.player.x, y:state.player.y-35, life:1.1, text:"GOLDEN!", color:"#fff4a8", stars:true });
   playSound("golden");
-  if(state.mission?.id==="golden")completeMission();
 }
 
 function collectSpill(acorn) {
@@ -476,7 +428,7 @@ function isMobileView() {
 }
 
 function getMobileZoom() {
-  const preferred=window.innerHeight>window.innerWidth?1.74:1.38;
+  const preferred=window.innerHeight>window.innerWidth?1.39:1.1;
   return Math.max(preferred,canvas.width/WORLD.width,canvas.height/WORLD.height);
 }
 
@@ -704,32 +656,62 @@ function drawHazard(h) {
   ctx.save(); ctx.translate(h.x,h.y); ctx.rotate(h.angle || 0);
   ctx.fillStyle="rgba(31,47,39,.18)";ctx.beginPath();ctx.ellipse(2,h.type==="cart"?21:15,h.type==="cart"?34:21,h.type==="cart"?10:7,0,0,Math.PI*2);ctx.fill();
   if(h.type==="student") {
-    const step=Math.sin(state.elapsed*9+h.offset)*4;
-    ctx.fillStyle=h.color;roundRect(-10,-8,20,25,5);ctx.fill();
-    if(h.style==="hoodie"){ctx.strokeStyle=h.color;ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,-13,10,Math.PI,0);ctx.stroke();ctx.fillStyle="#f3e3c3";ctx.fillRect(-2,0,4,7);}
-    if(h.style==="backpack"){ctx.fillStyle="#4b574d";roundRect(-15,-5,9,19,4);ctx.fill();}
-    if(h.style==="books"){ctx.fillStyle="#eee1b9";ctx.fillRect(8,-1,12,6);ctx.fillStyle="#8d5443";ctx.fillRect(9,5,11,5);}
-    ctx.fillStyle=h.skin;ctx.beginPath();ctx.arc(0,-16,8,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=h.hair;ctx.beginPath();ctx.arc(0,-19,8,Math.PI,0);ctx.fill();
-    ctx.strokeStyle="#4e473c";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-5,15);ctx.lineTo(-8,25+step);ctx.moveTo(5,15);ctx.lineTo(8,25-step);ctx.stroke();
+    drawStudentHazard(h);
   } else if(h.type==="bike") {
-    ctx.strokeStyle="#33443e";ctx.lineWidth=4;[-15,15].forEach(x=>{ctx.beginPath();ctx.arc(x,7,11,0,Math.PI*2);ctx.stroke();});
-    ctx.strokeStyle=h.frame;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-15,7);ctx.lineTo(0,-7);ctx.lineTo(15,7);ctx.lineTo(-2,7);ctx.lineTo(-15,7);ctx.moveTo(0,-7);ctx.lineTo(6,-18);ctx.stroke();
-    ctx.fillStyle=h.color;roundRect(-8,-26,17,16,5);ctx.fill();
-    ctx.fillStyle=h.skin;ctx.beginPath();ctx.arc(0,-32,7,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=h.hair;ctx.beginPath();ctx.arc(0,-35,7,Math.PI,0);ctx.fill();
-    if(h.style==="helmet"){ctx.fillStyle="#f2bf4c";ctx.beginPath();ctx.arc(0,-35,8,Math.PI,0);ctx.fill();}
-    if(h.style==="basket"){ctx.strokeStyle="#9a744e";ctx.lineWidth=3;ctx.strokeRect(12,-3,13,10);ctx.beginPath();ctx.moveTo(13,1);ctx.lineTo(24,1);ctx.moveTo(17,-3);ctx.lineTo(17,7);ctx.moveTo(21,-3);ctx.lineTo(21,7);ctx.stroke();}
+    drawBikeHazard(h);
   } else {
-    ctx.fillStyle="#e5dec4";roundRect(-30,-18,60,36,7);ctx.fill();ctx.strokeStyle="#6d765e";ctx.lineWidth=3;ctx.stroke();
-    ctx.fillStyle="#536949";ctx.fillRect(-17,-30,33,17);ctx.fillStyle="#d8e5d6";ctx.fillRect(-12,-27,22,11);
-    ctx.fillStyle="#f1c945";ctx.fillRect(18,-12,8,8);ctx.fillStyle="#b83e31";ctx.fillRect(-28,-11,7,7);
-    ctx.fillStyle="#315440";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("HC",1,7);ctx.textAlign="left";
-    ctx.strokeStyle="#6d765e";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-19,-31);ctx.lineTo(-19,-41);ctx.lineTo(19,-41);ctx.lineTo(19,-30);ctx.stroke();
-    ctx.fillStyle="#efc3a1";ctx.beginPath();ctx.arc(2,-21,6,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5b4334";ctx.beginPath();ctx.arc(2,-23,6,Math.PI,0);ctx.fill();
-    ctx.fillStyle="#38453b";[-16,16].forEach(x=>{ctx.beginPath();ctx.arc(x,18,7,0,Math.PI*2);ctx.fill();});
+    drawCartHazard(h);
   }
   ctx.restore();
+}
+
+function drawStudentHazard(h) {
+  const step=Math.sin(state.elapsed*9+h.offset)*4;
+  ctx.strokeStyle="rgba(35,47,39,.72)";ctx.lineWidth=7;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-6,15);ctx.lineTo(-10,27+step);ctx.moveTo(6,15);ctx.lineTo(11,27-step);ctx.stroke();
+  ctx.fillStyle="#f1dfaa";ctx.beginPath();ctx.arc(-10,30+step,4,0,Math.PI*2);ctx.arc(11,30-step,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="rgba(24,37,31,.28)";roundRect(-15,-11,30,31,8);ctx.fill();
+  if(h.style==="backpack"){ctx.fillStyle="#35463e";roundRect(-18,-6,11,22,5);ctx.fill();ctx.fillStyle="#c7d0b5";ctx.fillRect(-15,-1,5,12);}
+  ctx.fillStyle=h.color;roundRect(-12,-10,24,29,7);ctx.fill();ctx.strokeStyle="#263930";ctx.lineWidth=2;ctx.stroke();
+  if(h.style==="hoodie"){ctx.strokeStyle=h.color;ctx.lineWidth=6;ctx.beginPath();ctx.arc(0,-15,12,Math.PI,0);ctx.stroke();ctx.fillStyle="#f3e3c3";ctx.fillRect(-3,0,6,7);ctx.strokeStyle="#fff3cf";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-4,-5);ctx.lineTo(-7,3);ctx.moveTo(4,-5);ctx.lineTo(7,3);ctx.stroke();}
+  if(h.style==="books"){ctx.fillStyle="#eee1b9";roundRect(8,-2,14,7,2);ctx.fill();ctx.fillStyle="#8d5443";roundRect(9,5,13,7,2);ctx.fill();ctx.strokeStyle="#5b4334";ctx.lineWidth=1.5;ctx.strokeRect(8,-2,14,7);ctx.strokeRect(9,5,13,7);}
+  ctx.fillStyle=h.skin;ctx.beginPath();ctx.arc(0,-18,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=h.hair;ctx.beginPath();ctx.arc(0,-21,9,Math.PI,0);ctx.fill();
+  ctx.fillStyle="#24322d";ctx.beginPath();ctx.arc(-3,-18,1.4,0,Math.PI*2);ctx.arc(4,-18,1.4,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#f3e3c3";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-11,0);ctx.lineTo(-18,10+step*.25);ctx.moveTo(11,0);ctx.lineTo(18,9-step*.25);ctx.stroke();
+}
+
+function drawBikeHazard(h) {
+  const wheelSpin=state.elapsed*10+h.offset;
+  ctx.strokeStyle="rgba(20,34,29,.5)";ctx.lineWidth=7;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-42,2);ctx.lineTo(-59,2);ctx.moveTo(-38,13);ctx.lineTo(-54,13);ctx.stroke();
+  [-17,17].forEach((x,i)=>{
+    ctx.strokeStyle="#1c2b27";ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,8,13,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="rgba(245,249,225,.7)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,8);ctx.lineTo(x+Math.cos(wheelSpin+i)*11,8+Math.sin(wheelSpin+i)*11);ctx.moveTo(x,8);ctx.lineTo(x+Math.cos(wheelSpin+i+Math.PI)*11,8+Math.sin(wheelSpin+i+Math.PI)*11);ctx.stroke();
+  });
+  ctx.strokeStyle=h.frame;ctx.lineWidth=5;ctx.lineJoin="round";ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-17,8);ctx.lineTo(-3,-9);ctx.lineTo(17,8);ctx.lineTo(-2,8);ctx.lineTo(-17,8);ctx.moveTo(-3,-9);ctx.lineTo(7,-20);ctx.moveTo(-6,-13);ctx.lineTo(-15,-14);ctx.stroke();
+  ctx.fillStyle=h.color;roundRect(-10,-30,20,18,6);ctx.fill();ctx.strokeStyle="#20342f";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle=h.skin;ctx.beginPath();ctx.arc(1,-37,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=h.hair;ctx.beginPath();ctx.arc(1,-40,8,Math.PI,0);ctx.fill();
+  if(h.style==="helmet"){ctx.fillStyle="#f2bf4c";ctx.beginPath();ctx.arc(1,-40,9,Math.PI,0);ctx.fill();ctx.fillStyle="#fff2a8";ctx.fillRect(-4,-45,9,2);}
+  if(h.style==="basket"){ctx.strokeStyle="#9a744e";ctx.lineWidth=3;ctx.strokeRect(17,-5,15,11);ctx.beginPath();ctx.moveTo(18,-1);ctx.lineTo(31,-1);ctx.moveTo(22,-5);ctx.lineTo(22,6);ctx.moveTo(27,-5);ctx.lineTo(27,6);ctx.stroke();}
+}
+
+function drawCartHazard(h) {
+  ctx.strokeStyle="rgba(35,52,43,.42)";ctx.lineWidth=6;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-46,1);ctx.lineTo(-64,1);ctx.moveTo(-45,13);ctx.lineTo(-59,13);ctx.stroke();
+  ctx.fillStyle="#e5dec4";roundRect(-34,-19,68,39,8);ctx.fill();ctx.strokeStyle="#556354";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#f4efd8";roundRect(-25,-13,30,22,5);ctx.fill();
+  ctx.fillStyle="#8a9b7b";roundRect(5,-12,23,21,5);ctx.fill();
+  ctx.fillStyle="#536949";roundRect(-22,-34,44,16,3);ctx.fill();
+  ctx.fillStyle="#d8e5d6";roundRect(-16,-31,30,10,2);ctx.fill();
+  ctx.strokeStyle="#536949";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-24,-35);ctx.lineTo(-24,-45);ctx.lineTo(24,-45);ctx.lineTo(24,-34);ctx.stroke();
+  ctx.fillStyle="#f4d455";ctx.beginPath();ctx.arc(28,-6,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffd86b";ctx.beginPath();ctx.moveTo(34,-8);ctx.lineTo(47,-15);ctx.lineTo(47,0);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#b83e31";ctx.fillRect(-32,-10,7,8);
+  ctx.fillStyle="#315440";ctx.font="900 10px Nunito";ctx.textAlign="center";ctx.fillText("HC",3,8);ctx.textAlign="left";
+  ctx.fillStyle="#efc3a1";ctx.beginPath();ctx.arc(2,-23,7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5b4334";ctx.beginPath();ctx.arc(2,-25,7,Math.PI,0);ctx.fill();
+  [-19,19].forEach(x=>{ctx.fillStyle="#24322d";ctx.beginPath();ctx.arc(x,20,8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#6e7a67";ctx.beginPath();ctx.arc(x,20,4,0,Math.PI*2);ctx.fill();});
 }
 
 function drawPlayer() {
@@ -805,9 +787,10 @@ function updateAtmosphere(dt) {
 function drawAtmosphere() {
   ctx.save();
   state.leaves.forEach(leaf=>{
+    ctx.save();
     ctx.translate(leaf.x,leaf.y);ctx.rotate(Math.sin(state.elapsed*2+leaf.phase));
     ctx.fillStyle="rgba(197,139,62,.46)";ctx.beginPath();ctx.ellipse(0,0,6,3,.5,0,Math.PI*2);ctx.fill();
-    ctx.setTransform(1,0,0,1,0,0);
+    ctx.restore();
   });
   ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=3;
   for(let i=0;i<3;i++){const ripple=(state.elapsed*18+i*28)%78;ctx.beginPath();ctx.ellipse(170,900,ripple*1.7,ripple*.8,-.18,0,Math.PI*2);ctx.stroke();}
@@ -849,7 +832,6 @@ function getBestMoment() {
   if(state.bestCombo>=10)return `built a ${state.bestCombo}x scurry streak.`;
   if(state.goldenCaught>=2)return `rescued ${state.goldenCaught} golden acorns.`;
   if(state.dodges>=2)return `threaded ${state.dodges} close-call dodges.`;
-  if(state.missionsDone>=2)return `completed ${state.missionsDone} notebook missions.`;
   return "kept SBS's reunion stash moving.";
 }
 
@@ -992,7 +974,6 @@ function playSound(name){
     golden:[[784,.08,"triangle",0],[1047,.1,"triangle",.09],[1319,.16,"triangle",.2]],
     powerup:[[587,.08,"triangle",0],[784,.13,"triangle",.1]],
     dodge:[[860,.05,"triangle",0,.035],[1020,.08,"triangle",.07,.03]],
-    mission:[[660,.08,"triangle",0],[880,.1,"triangle",.09],[1100,.14,"triangle",.18]],
     bump:[[165,.1,"square",0],[125,.16,"sawtooth",.08]],
     wobble:[[180,.1,"sawtooth",0],[145,.1,"sawtooth",.1],[115,.18,"sawtooth",.2]],
     bird:[[1250,.05,"sine",0],[1580,.06,"sine",.09],[1390,.05,"sine",.18]],
