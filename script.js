@@ -12,16 +12,18 @@ const FIRST_GOLDEN_ACORN_AT = 60;
 const POWERUP_INTERVAL = 24;
 const POWERUP_LIFETIME = 14;
 const FIRST_POWERUP_AT = 38;
+const SKEETERS_SHIELD_SECONDS = 8;
+const SKEETERS_BOOST_SECONDS = 2;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 const landmarks = [
-  { id: "dc", name: "Dining Center", short: "THE DC", x: 238, y: 176, w: 235, h: 126, type: "dc", secret: { x: 225, y: 320 }, note: "Late-night pancake machine energy." },
-  { id: "lloyd", name: "Lloyd Hall", short: "LLOYD", x: 502, y: 108, w: 238, h: 104, type: "dorm", secret: { x: 754, y: 187 }, note: "A suspiciously well-hidden dorm stash." },
-  { id: "founders", name: "Founders Hall", short: "FOUNDERS", x: 790, y: 340, w: 330, h: 152, type: "founders", secret: { x: 948, y: 518 }, note: "SBS salutes the cupola." },
-  { id: "barclay", name: "Barclay Hall", short: "BARCLAY", x: 1190, y: 480, w: 230, h: 116, type: "dorm", secret: { x: 1163, y: 572 }, note: "Oldest dorm. Excellent acorn masonry." },
-  { id: "campus", name: "Whitehead Campus Center", short: "CAMPUS CENTER", x: 1118, y: 760, w: 275, h: 110, type: "center", secret: { x: 1087, y: 813 }, note: "SBS checked the mailroom twice." }
+  { id: "dc", name: "Dining Center", short: "THE DC", x: 238, y: 176, w: 235, h: 126, type: "dc", secret: { x: 225, y: 320, object: "tray", label: "Dining tray memory" }, note: "SBS remembers the clatter of DC trays." },
+  { id: "lloyd", name: "Lloyd Hall", short: "LLOYD", x: 502, y: 108, w: 238, h: 104, type: "dorm", secret: { x: 754, y: 187, object: "key", label: "Dorm key memory" }, note: "A suspiciously well-hidden dorm stash." },
+  { id: "founders", name: "Founders Hall", short: "FOUNDERS", x: 790, y: 340, w: 330, h: 152, type: "founders", secret: { x: 948, y: 518, object: "cupola", label: "Cupola memory" }, note: "SBS salutes the cupola." },
+  { id: "barclay", name: "Barclay Hall", short: "BARCLAY", x: 1190, y: 480, w: 230, h: 116, type: "dorm", secret: { x: 1163, y: 572, object: "stone", label: "Old stone memory" }, note: "Oldest dorm. Excellent acorn masonry." },
+  { id: "campus", name: "Whitehead Campus Center", short: "CAMPUS CENTER", x: 1118, y: 760, w: 275, h: 110, type: "center", secret: { x: 1087, y: 813, object: "mail", label: "Mailroom memory" }, note: "SBS checked the mailroom twice." }
 ];
 
 const paths = [
@@ -54,9 +56,10 @@ const powerupSpots = [
 ];
 
 const powerupTypes = [
-  { id:"pancake", name:"DC Pancake", note:"SBS has pancake-powered zoom!", duration:7 },
-  { id:"leaf", name:"Arboretum Leaf", note:"Secret landmark stashes are glowing!", duration:9 },
-  { id:"scroll", name:"Honor Code Scroll", note:"SBS is bump-proof for a few seconds!", duration:6 }
+  { id:"pancake", name:"DC Pancake", note:"SBS has pancake-powered zoom!", duration:7, weight:3 },
+  { id:"leaf", name:"Arboretum Leaf", note:"Secret landmark stashes are glowing!", duration:9, weight:3 },
+  { id:"scroll", name:"Honor Code Scroll", note:"SBS is bump-proof for a few seconds!", duration:6, weight:3 },
+  { id:"skeeters", name:"Skeeter's Pie", note:"Skeeter's Pie! Late-night delivery mode.", duration:SKEETERS_SHIELD_SECONDS, weight:3 }
 ];
 
 const hazardRoutes = [
@@ -82,13 +85,13 @@ let orientationGateEnabled = false;
 function newState() {
   return {
     running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
-    player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, moving:false },
+    player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, secretDance: 0, moving:false },
     camera: { x:690, y:560 },
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
-    hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, collected:false, hidden:true, landmark:l })),
+    hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null,
-    activePowerups: { pancake:0, leaf:0, scroll:0 }, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    activePowerups: { pancake:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0 }, skeetersDeliveries:0, skeetersBlocks:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
   };
@@ -175,7 +178,8 @@ function update(dt) {
   const dy = clamp((keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0)+joystick.y,-1,1);
   state.player.moving = Boolean(dx || dy);
   const mag = Math.hypot(dx, dy)||1;
-  const speed = PLAYER_SPEED * (state.activePowerups.pancake > 0 ? 1.48 : 1);
+  const boost = Math.max(state.activePowerups.pancake > 0 ? 1.48 : 1, state.activePowerups.skeetersBoost > 0 ? 1.32 : 1);
+  const speed = PLAYER_SPEED * boost;
   const targetVx=dx/mag*speed,targetVy=dy/mag*speed;
   const ease=1-Math.exp(-(dx||dy?13:18)*dt);
   state.player.vx+=(targetVx-state.player.vx)*ease;state.player.vy+=(targetVy-state.player.vy)*ease;
@@ -185,6 +189,7 @@ function update(dt) {
   if(Math.hypot(state.player.vx,state.player.vy)>8)state.player.bob+=dt*13;
   state.player.invulnerable = Math.max(0, state.player.invulnerable - dt);
   state.player.spin = Math.max(0, state.player.spin - dt);
+  state.player.secretDance = Math.max(0, state.player.secretDance - dt);
   Object.keys(state.activePowerups).forEach(id => state.activePowerups[id] = Math.max(0, state.activePowerups[id] - dt));
 
   if (!hasSpecialEvent() && state.elapsed >= state.nextGoldenAt) spawnGoldenAcorn();
@@ -221,7 +226,11 @@ function update(dt) {
   state.spills = state.spills.filter(acorn => !acorn.collected && acorn.life > 0);
   if (!state.player.invulnerable && state.activePowerups.scroll <= 0) {
     for (const hazard of state.hazards) {
-      if (distance(state.player, hazard) < state.player.r + hazard.radius) { bump(hazard); break; }
+      if (distance(state.player, hazard) < state.player.r + hazard.radius) {
+        if (state.activePowerups.skeeters > 0) blockWithSkeetersPie(hazard);
+        else bump(hazard);
+        break;
+      }
     }
   }
   state.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
@@ -296,9 +305,10 @@ function collectAcorn(acorn) {
   if (acorn.hidden) {
     state.secrets++;
     state.landmarkPulse=.75;
+    state.player.secretDance=.55;
     updateTourProgress(acorn.landmark.id);
     triggerLandmarkCelebration(acorn.landmark);
-    showToast(`${acorn.landmark.name}: secret stash found!`);
+    showToast(`${acorn.label}: ${acorn.landmark.name} secret found!`);
     document.getElementById("missionTitle").textContent = acorn.landmark.name;
     document.getElementById("missionText").textContent = acorn.landmark.note;
     playTone(880, .08, "triangle"); playTone(1175, .14, "triangle", .09);
@@ -307,19 +317,33 @@ function collectAcorn(acorn) {
 
 function spawnPowerup() {
   const [x,y] = powerupSpots[Math.floor(Math.random() * powerupSpots.length)];
-  const type = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+  const type = choosePowerupType();
   state.powerup = { x, y, life:POWERUP_LIFETIME, type };
 }
 
 function collectPowerup() {
   const { x, y, type } = state.powerup;
   state.activePowerups[type.id] = type.duration;
+  if (type.id === "skeeters") {
+    state.activePowerups.skeetersBoost = SKEETERS_BOOST_SECONDS;
+    state.skeetersDeliveries++;
+  }
   state.powerup = null;
   state.nextPowerupAt = state.elapsed + POWERUP_INTERVAL;
-  spawnParticles(x, y, type.id === "leaf" ? "#b7df70" : "#ffe38a");
+  spawnParticles(x, y, type.id === "leaf" ? "#b7df70" : type.id === "skeeters" ? "#ffb45d" : "#ffe38a");
   addScorePop(x, y, type.name.toUpperCase(), "#f7f2bf");
   showToast(type.note);
   playSound("powerup");
+}
+
+function choosePowerupType() {
+  const total=powerupTypes.reduce((sum,type)=>sum+(type.weight||1),0);
+  let pick=Math.random()*total;
+  for (const type of powerupTypes) {
+    pick-=type.weight||1;
+    if (pick<=0) return type;
+  }
+  return powerupTypes[0];
 }
 
 function spawnGoldenAcorn() {
@@ -370,6 +394,20 @@ function bump(hazard) {
   showToast(`${label}${lost ? " Grab that runaway acorn!" : ""}`);
   spawnParticles(state.player.x, state.player.y, "#ffffff");
   playSound(hazard.type==="cart" ? "wobble" : "bump");
+}
+
+function blockWithSkeetersPie(hazard) {
+  state.activePowerups.skeeters = 0;
+  state.activePowerups.skeetersBoost = 0;
+  state.player.invulnerable = 1.1;
+  state.player.spin = hazard.type === "cart" ? .45 : .25;
+  state.shake = reducedMotionQuery.matches ? 0 : .16;
+  state.skeetersBlocks++;
+  spawnPizzaCrumbs(state.player.x, state.player.y);
+  addScorePop(state.player.x, state.player.y-22, "PIZZA BOX BLOCK!", "#fff0a8", 19);
+  showToast("Pizza box saved the stash!");
+  state.reactions.push({ x:state.player.x, y:state.player.y-32, life:1.1, text:"SKEETER'S!", color:"#fff1bd", stars:true });
+  playSound("powerup");
 }
 
 function spillAcorn(count) {
@@ -632,10 +670,72 @@ function drawGoldenAcorn(a) {
 function drawHiddenAcorn(a) {
   if(a.collected) return;
   const near=distance(state.player,a)<145;
-  ctx.save(); ctx.globalAlpha=state.activePowerups.leaf > 0 ? .85 : near ? .62+.18*Math.sin(state.elapsed*5) : .22+.12*Math.sin(state.elapsed*3); ctx.strokeStyle=state.activePowerups.leaf > 0 ? "#ddff82" : near?"#fff0a0":"#fff1ad";ctx.lineWidth=state.activePowerups.leaf > 0 ? 6 : near?5:3;
-  ctx.beginPath();ctx.arc(a.x,a.y,(near?19:13)+Math.sin(state.elapsed*4)*3,0,Math.PI*2);ctx.stroke();
-  if(near){ctx.fillStyle="#fff0a0";for(let i=0;i<3;i++){const angle=state.elapsed*2+i*2.1;ctx.fillRect(a.x+Math.cos(angle)*26-2,a.y+Math.sin(angle)*18-2,4,4);}}
+  const revealed=state.activePowerups.leaf>0;
+  const alpha=revealed ? .95 : near ? .72+.16*Math.sin(state.elapsed*5) : .32+.1*Math.sin(state.elapsed*3);
+  ctx.save();ctx.globalAlpha=alpha;
+  drawSecretSparkles(a.x,a.y,near||revealed);
+  if(near||revealed)drawSecretObject(a);
+  if(near){
+    ctx.fillStyle="#fff8c7";ctx.strokeStyle="rgba(38,60,43,.65)";ctx.lineWidth=3;ctx.font="900 12px Nunito";ctx.textAlign="center";
+    ctx.strokeText(a.label.toUpperCase(),a.x,a.y-34);ctx.fillText(a.label.toUpperCase(),a.x,a.y-34);
+  }
   ctx.restore();
+}
+
+function drawSecretSparkles(x,y,strong=false) {
+  const count=strong?7:4, radius=strong?28:18;
+  ctx.fillStyle=strong?"#fff0a0":"#fff5bd";
+  for(let i=0;i<count;i++){
+    const angle=state.elapsed*1.8+i*Math.PI*2/count, twinkle=.65+.35*Math.sin(state.elapsed*5+i);
+    const sx=x+Math.cos(angle)*radius, sy=y+Math.sin(angle*1.15)*radius*.58;
+    ctx.globalAlpha*=twinkle;
+    ctx.fillRect(sx-2,sy-2,4,4);
+    ctx.globalAlpha/=twinkle;
+  }
+}
+
+function drawSecretObject(a) {
+  ctx.save();ctx.translate(a.x,a.y+Math.sin(state.elapsed*4)*2);
+  ctx.fillStyle="rgba(30,48,34,.2)";ctx.beginPath();ctx.ellipse(0,17,22,7,0,0,Math.PI*2);ctx.fill();
+  if(a.object==="tray")drawSecretTray();
+  else if(a.object==="key")drawSecretKey();
+  else if(a.object==="cupola")drawSecretCupola();
+  else if(a.object==="stone")drawSecretStone();
+  else drawSecretMail();
+  ctx.restore();
+}
+
+function drawSecretTray() {
+  ctx.fillStyle="#d7d2c4";roundRect(-21,-12,42,27,5);ctx.fill();
+  ctx.strokeStyle="#7a7f76";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#f6f0dc";roundRect(-14,-7,15,10,3);ctx.fill();
+  ctx.fillStyle="#8fb36d";roundRect(5,-7,10,10,3);ctx.fill();
+  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(-8,8,4,0,Math.PI*2);ctx.fill();
+}
+
+function drawSecretKey() {
+  ctx.strokeStyle="#f2d06c";ctx.lineWidth=7;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-4,1);ctx.lineTo(20,1);ctx.stroke();
+  ctx.fillStyle="#f8df85";ctx.beginPath();ctx.arc(-10,1,10,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#8b6a2f";ctx.lineWidth=3;ctx.beginPath();ctx.arc(-10,1,5,0,Math.PI*2);ctx.moveTo(14,1);ctx.lineTo(14,10);ctx.moveTo(20,1);ctx.lineTo(20,8);ctx.stroke();
+}
+
+function drawSecretCupola() {
+  ctx.fillStyle="#f1dfbc";roundRect(-14,-2,28,19,3);ctx.fill();
+  ctx.strokeStyle="#7b604d";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#5b5243";ctx.beginPath();ctx.moveTo(-18,-2);ctx.lineTo(0,-20);ctx.lineTo(18,-2);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#7c5748";[-7,0,7].forEach(x=>ctx.fillRect(x-2,5,4,12));
+}
+
+function drawSecretStone() {
+  ctx.fillStyle="#cbb898";roundRect(-18,-10,36,27,5);ctx.fill();
+  ctx.strokeStyle="#7d6a52";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#7d6a52";ctx.font="900 10px Nunito";ctx.textAlign="center";ctx.fillText("1877",0,5);
+}
+
+function drawSecretMail() {
+  ctx.fillStyle="#f8edcf";roundRect(-19,-11,38,25,3);ctx.fill();
+  ctx.strokeStyle="#af8e5b";ctx.lineWidth=3;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-19,-11);ctx.lineTo(0,2);ctx.lineTo(19,-11);ctx.moveTo(-19,14);ctx.lineTo(-2,1);ctx.moveTo(19,14);ctx.lineTo(2,1);ctx.stroke();
 }
 
 function drawPowerup(p) {
@@ -644,13 +744,14 @@ function drawPowerup(p) {
   drawPowerupRing(p.type.id);
   if(p.type.id==="pancake")drawPancakePowerup();
   else if(p.type.id==="leaf")drawLeafPowerup();
-  else drawScrollPowerup();
+  else if(p.type.id==="scroll")drawScrollPowerup();
+  else drawSkeetersPiePowerup();
   ctx.restore();
 }
 
 function drawPowerupRing(type) {
   const pulse=Math.sin(state.elapsed*6);
-  const colors={pancake:"#ffd46b",leaf:"#caff75",scroll:"#bde8ff"};
+  const colors={pancake:"#ffd46b",leaf:"#caff75",scroll:"#bde8ff",skeeters:"#ffb45d"};
   ctx.save();ctx.globalAlpha=.42+.12*pulse;ctx.strokeStyle=colors[type]||"#fff5a6";ctx.lineWidth=4;
   ctx.beginPath();ctx.arc(0,2,30+pulse*3,0,Math.PI*2);ctx.stroke();
   ctx.globalAlpha=.2;ctx.fillStyle=colors[type]||"#fff5a6";ctx.beginPath();ctx.arc(0,2,35,0,Math.PI*2);ctx.fill();ctx.restore();
@@ -686,6 +787,16 @@ function drawScrollPowerup() {
   ctx.strokeStyle="#8c6a34";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-11,-9);ctx.lineTo(11,-9);ctx.moveTo(-11,10);ctx.lineTo(11,10);ctx.stroke();
   ctx.fillStyle="#315440";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText("HC",0,5);ctx.textAlign="left";
   ctx.strokeStyle="rgba(255,240,160,.78)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();ctx.restore();
+}
+
+function drawSkeetersPiePowerup() {
+  ctx.save();ctx.rotate(Math.sin(state.elapsed*4)*.08);
+  ctx.fillStyle="#fff0c2";roundRect(-24,-17,48,34,5);ctx.fill();
+  ctx.strokeStyle="#a7502a";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#d77737";roundRect(-18,-11,36,7,3);ctx.fill();
+  ctx.fillStyle="#7d3e24";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("SKEETER'S",0,8);
+  ctx.fillStyle="#f5ba4e";ctx.beginPath();ctx.arc(15,-7,4,0,Math.PI*2);ctx.fill();
+  ctx.restore();
 }
 
 function drawHazard(h) {
@@ -753,8 +864,11 @@ function drawCartHazard(h) {
 function drawPlayer() {
   const p=state.player, blink=p.invulnerable && Math.floor(state.elapsed*14)%2;
   if(blink)return;
-  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.spin ? (1-p.spin) * 18 : 0);ctx.scale(p.facing,1);
+  ctx.save();ctx.translate(p.x,p.y);
+  if(p.secretDance>0)ctx.rotate(Math.sin((.55-p.secretDance)*30)*.32);
+  ctx.rotate(p.spin ? (1-p.spin) * 18 : 0);ctx.scale(p.facing,1);
   const stride=Math.sin(p.bob),hop=p.moving?Math.abs(stride)*4:Math.sin(state.elapsed*2)*1.5;ctx.translate(0,-hop);
+  if(p.secretDance>0)ctx.translate(0,-Math.sin((.55-p.secretDance)*Math.PI/.55)*8);
   ctx.fillStyle="rgba(20,38,30,.22)";ctx.beginPath();ctx.ellipse(0,23,27,10,0,0,Math.PI*2);ctx.fill();
   const tailSwing=Math.sin(state.elapsed*(p.moving?10:3))*.24;
   ctx.fillStyle="#101b18";ctx.beginPath();ctx.ellipse(-29,-5,33,25,-.78+tailSwing,0,Math.PI*2);ctx.fill();
@@ -780,7 +894,19 @@ function drawPlayer() {
   ctx.fillStyle="#fff";ctx.font="900 7px Nunito";ctx.textAlign="center";ctx.fillText("SBS",-1,10);
   if(state.activePowerups.pancake>0){ctx.strokeStyle="rgba(255,221,111,.7)";ctx.lineWidth=4;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-44-i*13,-10+i*10);ctx.lineTo(-62-i*13,-10+i*10);ctx.stroke();}}
   if(state.activePowerups.scroll>0){ctx.strokeStyle="#fff0a0";ctx.lineWidth=4;ctx.globalAlpha=.7+.2*Math.sin(state.elapsed*8);ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.stroke();}
+  if(state.activePowerups.skeeters>0)drawSkeetersBoxShield();
   ctx.restore();
+}
+
+function drawSkeetersBoxShield() {
+  const pulse=.85+.15*Math.sin(state.elapsed*8);
+  ctx.save();ctx.globalAlpha=pulse;ctx.translate(26,-8);ctx.rotate(-.12);
+  ctx.fillStyle="#fff0c2";roundRect(-6,-19,38,29,4);ctx.fill();
+  ctx.strokeStyle="#a7502a";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#d77737";roundRect(-1,-14,26,6,3);ctx.fill();
+  ctx.fillStyle="#713a21";ctx.font="900 6px Nunito";ctx.textAlign="center";ctx.fillText("SKEETER'S",13,2);
+  ctx.restore();
+  ctx.save();ctx.globalAlpha=.36+.16*Math.sin(state.elapsed*7);ctx.strokeStyle="#ffca73";ctx.lineWidth=4;ctx.beginPath();ctx.arc(2,0,33,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 
 function addScorePop(x,y,text,color,size=19) {
@@ -876,6 +1002,8 @@ function getRank() {
 
 function getBestMoment() {
   if(state.secrets===landmarks.length)return "found every campus secret.";
+  if(state.skeetersBlocks>0)return "saved the stash with a Skeeter's pizza box.";
+  if(state.skeetersDeliveries>0)return "completed a heroic Skeeter's delivery.";
   if(state.bestCombo>=10)return `built a ${state.bestCombo}x scurry streak.`;
   if(state.goldenCaught>=2)return `rescued ${state.goldenCaught} golden acorns.`;
   if(state.dodges>=2)return `threaded ${state.dodges} close-call dodges.`;
@@ -937,6 +1065,13 @@ function drawBanner(x,y,text) {
 function drawMiniPancake(x,y) {
   ctx.fillStyle="#e0a14c";ctx.beginPath();ctx.ellipse(x,y,13,7,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#f2c75c";ctx.beginPath();ctx.ellipse(x,y-4,13,7,0,0,Math.PI*2);ctx.fill();
+}
+
+function spawnPizzaCrumbs(x,y) {
+  for(let i=0;i<12;i++){
+    const a=Math.PI*2*i/12, speed=55+(i%4)*18;
+    state.particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.7,color:i%3?"#ffd271":"#fff1bd"});
+  }
 }
 
 function drawPowerupStatus() {

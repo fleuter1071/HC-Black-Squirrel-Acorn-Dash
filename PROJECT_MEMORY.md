@@ -2,6 +2,163 @@
 
 Session notes will be appended here as the game evolves.
 
+## 2026-06-06 - DC hidden memory changed to dining tray
+
+- Date/time
+  - 2026-06-06, America/New_York.
+- Feature name, work name, description, and value provided
+  - Updated the Dining Center hidden campus memory from a pancake object to a dining tray object.
+  - Made the DC secret feel more grounded in the user's Haverford memory by referencing the clatter and presence of DC trays.
+- Files changed
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Reused the existing landmark-specific hidden memory system.
+  - Changed the DC secret metadata from `object: "pancake"` / `Pancake memory` to `object: "tray"` / `Dining tray memory`.
+  - Replaced the pancake memory drawing helper with a dining tray helper that shows tray compartments and small food shapes.
+- Assumptions
+  - DC dining trays are a better campus-memory signal than pancakes for this project.
+  - The standalone DC Pancake powerup can still exist separately unless future feedback says it should also change.
+- Known limitations
+  - The tray is still a symbolic canvas drawing and should be visually checked at mobile size.
+- Key learnings that you can bring with you to future sessions
+  - When nostalgia details feel generic or inherited, prefer the user's lived campus memory.
+  - Hidden memories should be specific enough that alumni can recognize why the object belongs there.
+- Remaining TODOs
+  - Playtest the DC tray memory for readability and emotional fit.
+  - Consider whether the separate `DC Pancake` powerup should remain, be renamed, or be replaced later.
+- Next steps
+  - Refresh the browser and verify the DC secret reads clearly as a tray.
+
+## 2026-06-06 - Hidden stash visual clarity pass
+
+- Date/time
+  - 2026-06-06, America/New_York.
+- Feature name, work name, description, and value provided
+  - Reworked hidden stash visuals so they are easier to understand and feel more connected to campus nostalgia.
+  - Replaced abstract rings with tiny floating sparkles plus landmark-specific memory objects.
+  - Added a very brief SBS celebration dance when a hidden campus memory is collected.
+- Files changed
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Extended landmark secret definitions with `object` and `label` metadata.
+  - Added drawing helpers for secret memory props: pancake, dorm key, cupola, old stone marker, and mailroom envelope.
+  - Added `player.secretDance` as a short visual-only player celebration state.
+- Assumptions
+  - Hidden stashes should read as campus memories, not generic collectibles.
+  - The Arboretum Leaf still acts as the reveal helper, but now reveals memory objects instead of stronger rings.
+- Known limitations
+  - The secret objects are canvas-drawn symbolic props, not full illustrated assets.
+  - Visual tuning should be playtested on mobile to confirm objects remain readable at small sizes.
+- Key learnings that you can bring with you to future sessions
+  - Exploration rewards feel stronger when they have world meaning.
+  - A small object plus sparkle cue communicates "discoverable memory" better than an abstract ring.
+- Remaining TODOs
+  - Playtest whether labels should appear sooner, later, or only when very close.
+  - Consider giving each memory object a named end-screen badge later.
+- Next steps
+  - QA one full run and confirm each hidden stash object is readable.
+
+## 2026-06-06 - Skeeter's Pie powerup implementation
+
+- Date/time
+  - 2026-06-06, America/New_York.
+- Feature name, work name, description, and value provided
+  - Added Skeeter's Pie as a rare gameplay powerup.
+  - The pickup gives SBS a short delivery speed burst plus a visible one-hit pizza-box shield.
+  - If the shield blocks a collision, SBS keeps the stash safe and gets a Skeeter's-themed reaction/toast.
+- Files changed
+  - `script.js`
+  - `index.html`
+  - `styles.css`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Extended the existing powerup system instead of adding a separate module.
+  - Added `SKEETERS_SHIELD_SECONDS` and `SKEETERS_BOOST_SECONDS` near the top of `script.js`.
+  - Added weighted powerup selection so Skeeter's Pie appears rarely compared with standard powerups.
+  - Added drawing helpers for the Skeeter's Pie pickup and SBS's carried pizza-box shield.
+- Assumptions
+  - Skeeter's should first appear as a small nostalgia-rich mechanic inside the current game before becoming a full module.
+  - The shield should be one-hit protection, distinct from the Honor Code Scroll's timed bump-proof behavior.
+- Known limitations
+  - The delivery runner / student hazard variant has not been added yet.
+  - Gameplay balance for spawn rarity should be playtested.
+- Key learnings that you can bring with you to future sessions
+  - Skeeter's works well as protective comfort food: nostalgia and mechanic explain each other visually.
+  - A rare powerup is a low-risk way to introduce old-campus lore without expanding the map.
+- Remaining TODOs
+  - Playtest whether the rarity feels special enough but not too hidden.
+  - Consider adding a Skeeter's delivery student hazard later.
+- Next steps
+  - QA the pickup visually in a live run or add a debug-friendly way to force specific powerups during development.
+
+## 2026-06-06 - Wawa module research ingestion
+
+- Date/time
+  - 2026-06-06, America/New_York.
+- Feature name, work name, description, and value provided
+  - Captured user-provided research and product ideas for a future Wawa module/screen.
+  - Preserved Wawa as a Haverford-adjacent nostalgia ritual: late-night off-campus snack runs, Lancaster Avenue crossing, Shorti hoagies, coffee, and the regional initiation feeling of discovering Wawa in college.
+  - Added a dedicated reference file so future sessions can build from the lore without re-asking for context.
+- Files changed
+  - `WAWA_MODULE_NOTES.md`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - No code changes.
+  - Stored the concept as documentation first, keeping future implementation optional and avoiding premature feature complexity.
+  - Recommended future shape: repeatable off-campus side quest with escalating absurdity rather than a normal campus zone.
+- Assumptions
+  - The provided Wawa details should be treated as user-provided research for future product design.
+  - Future implementation should keep the current campus game playable on its own, with Wawa acting as an optional off-campus supply run.
+- Known limitations
+  - Source links were recorded as provided, not independently re-verified during this ingestion step.
+  - Specific gameplay mechanics, art direction, map boundaries, and module scope still need prioritization before implementation.
+- Key learnings that you can bring with you to future sessions
+  - Wawa should be treated as a ritual, not an official campus landmark.
+  - Best game framing: `late night + hungry + off-campus pilgrimage + Lancaster Avenue + survival snacks`.
+  - Strongest product move is to make Wawa a repeatable side quest that gets funnier and more chaotic over time.
+- Remaining TODOs
+  - Decide whether Wawa becomes a side quest, mini-game, collectible loop, or share-card unlock.
+  - If implementing, define how SBS exits and re-enters the campus map without making the main loop confusing.
+  - Verify source references if the module will include source-sensitive copy or public claims.
+- Next steps
+  - Use `WAWA_MODULE_NOTES.md` when planning the Wawa module.
+  - Define the smallest playable Wawa MVP before changing code.
+
+## 2026-06-06 - Skeeter's module research ingestion
+
+- Date/time
+  - 2026-06-06, America/New_York.
+- Feature name, work name, description, and value provided
+  - Captured user-provided research and product ideas for a future Skeeter's module/screen.
+  - Preserved Skeeter's as a major Haverford nostalgia node: student-run pizza operation in Leeds basement, late-night pizza/breadsticks, 1980s-1990s alumni memory, and potential hidden basement level.
+  - Added a dedicated reference file so future sessions can build from the lore without re-asking for context.
+- Files changed
+  - `SKEETERS_MODULE_NOTES.md`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - No code changes.
+  - Stored the concept as documentation first, keeping future implementation optional and avoiding premature feature complexity.
+  - Recommended future shape: secret unlockable Leeds basement level / memory portal rather than a main-map location.
+- Assumptions
+  - The provided Skeeter's details should be treated as user-provided research for future product design.
+  - Future implementation should preserve the current simple campus game loop while adding Skeeter's as an optional nostalgia module.
+- Known limitations
+  - Source links were recorded as provided, not independently re-verified during this ingestion step.
+  - Specific gameplay mechanics, art direction, and module scope still need prioritization before implementation.
+- Key learnings that you can bring with you to future sessions
+  - Skeeter's should feel like a student-run pizza bunker, not a polished restaurant.
+  - Best game framing: `basement + Leeds + student-run + late-night food + old-campus memory portal`.
+  - Strongest product move is to make Skeeter's a secret unlockable basement level reached through current-day Leeds.
+- Remaining TODOs
+  - Decide whether Skeeter's becomes a standalone screen, mini-game, collectible room, or share-card unlock.
+  - If implementing, consider adding Leeds to the campus map or making the entrance a hidden trigger near an existing dorm landmark.
+  - Verify source references if the module will include source-sensitive copy or public claims.
+- Next steps
+  - Use `SKEETERS_MODULE_NOTES.md` when planning the Skeeter's module.
+  - Define the smallest playable Skeeter's MVP before changing code.
+
 ## 2026-06-02  - Hazard polish, gameplay simplification, mobile fixes, and production push
 
 - Date/time

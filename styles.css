@@ -80,6 +80,7 @@ canvas { display: block; width: 100%; height: 100%; }
 .pancake-icon { color: #8b5929; background: #edbb5e; }
 .leaf-icon { color: #e9f5ae; background: #75a94e; transform: rotate(45deg); }
 .scroll-icon { color: #487053; border-radius: 3px; background: #f1dfaa; font-size: 7px; }
+.pie-icon { color: #8e4d28; border: 2px solid #d77737; border-radius: 3px; background: #fff0c2; font-size: 7px; }
 .gold-icon { color: #fff5a9; background: #e3b62c; box-shadow: 0 0 8px #ffe56b; }
 .tour-card {
   position: absolute; right: 14px; top: 78px; padding: 8px 10px; color: #6e664e; border: 1px solid rgba(76,83,58,.18);
