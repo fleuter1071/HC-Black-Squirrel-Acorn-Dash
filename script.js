@@ -33,9 +33,9 @@ const paths = [
 ];
 
 const trees = [
-  [95,118,42],[170,215,34],[1380,142,45],[1480,240,36],[85,780,42],[185,880,38],[340,850,45],
-  [525,530,30],[620,720,38],[760,795,33],[1460,840,46],[1310,930,36],[1060,190,39],[1180,135,31],
-  [870,165,26],[560,315,28],[345,545,33],[1520,520,31],[40,510,36],[950,890,28],[118,630,27]
+  [95,118,42],[170,215,34,"dogwood"],[1380,142,45],[1480,240,36],[85,780,42],[185,880,38],[340,850,45],
+  [525,530,30],[620,720,38],[760,795,33],[1460,840,46,"sycamore"],[1310,930,36],[1060,190,39],[1180,135,31],
+  [870,165,26,"tulip"],[560,315,28],[345,545,33],[1520,520,31],[40,510,36,"maple"],[950,890,28],[118,630,27]
 ];
 
 const trailChapters = [
@@ -530,7 +530,7 @@ function drawCampus() {
   ctx.fillStyle = "#b7d29a"; ctx.beginPath(); ctx.ellipse(900,640,470,270,-.18,0,Math.PI*2); ctx.fill();
   drawPond();
   paths.forEach(drawIllustratedPath);
-  trees.forEach(([x,y,r]) => drawTree(x,y,r));
+  trees.forEach(([x,y,r,type]) => drawTree(x,y,r,type));
   landmarks.forEach(drawBuilding);
   drawCampusDetails();
   drawMapLabel(90,946,"DUCK POND",11);
@@ -611,12 +611,91 @@ function drawStoneTexture(x,y,w,h) {
   ctx.restore();
 }
 
-function drawTree(x,y,r) {
+function drawTree(x,y,r,type) {
+  if(type==="dogwood")return drawDogwoodTree(x,y,r);
+  if(type==="tulip")return drawTulipPoplarTree(x,y,r);
+  if(type==="sycamore")return drawSycamoreTree(x,y,r);
+  if(type==="maple")return drawMapleTree(x,y,r);
   ctx.fillStyle="rgba(47,77,43,.22)"; ctx.beginPath(); ctx.ellipse(x+7,y+11,r*1.05,r*.66,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle="#6f563e";ctx.fillRect(x-4,y-4,8,r*.72);
   ctx.fillStyle="#416f46"; [[-.45,-.1],[.38,-.2],[0,.32],[0,-.42]].forEach(([dx,dy])=>{ctx.beginPath();ctx.arc(x+dx*r,y+dy*r,r*.62,0,Math.PI*2);ctx.fill();});
   ctx.fillStyle="#5f8a54"; ctx.beginPath();ctx.arc(x-r*.18,y-r*.3,r*.42,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle="rgba(34,75,45,.52)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*.76,0,Math.PI*2);ctx.stroke();
+}
+
+function drawDogwoodTree(x,y,r) {
+  ctx.save();
+  ctx.fillStyle="rgba(47,77,43,.18)";ctx.beginPath();ctx.ellipse(x+6,y+10,r*.9,r*.56,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#735a42";ctx.lineWidth=6;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(x,y+18);ctx.lineTo(x,y-8);ctx.moveTo(x,y-3);ctx.lineTo(x-r*.28,y-r*.2);ctx.moveTo(x,y-4);ctx.lineTo(x+r*.32,y-r*.18);ctx.stroke();
+  [[-.34,-.18],[.28,-.22],[-.12,.2],[.2,.18],[0,-.38]].forEach(([dx,dy],i)=>{
+    ctx.fillStyle=i%2?"#4f7f4b":"#5d9154";ctx.beginPath();ctx.arc(x+dx*r,y+dy*r,r*.36,0,Math.PI*2);ctx.fill();
+  });
+  ctx.fillStyle="#fff5e8";
+  for(let i=0;i<9;i++){const a=i*.72;ctx.beginPath();ctx.ellipse(x+Math.cos(a)*r*.48,y+Math.sin(a)*r*.34,5,3,a,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle="#e6b7bf";ctx.beginPath();ctx.arc(x-r*.18,y-r*.15,4,0,Math.PI*2);ctx.arc(x+r*.24,y-r*.08,3.5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawTulipPoplarTree(x,y,r) {
+  ctx.save();
+  ctx.fillStyle="rgba(47,77,43,.18)";ctx.beginPath();ctx.ellipse(x+7,y+12,r*.92,r*.58,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#7a5b3d";ctx.fillRect(x-5,y-5,10,r*.82);
+  ctx.fillStyle="#4f7f3d";ctx.beginPath();ctx.ellipse(x,y-r*.05,r*.62,r*.92,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#6c9e4f";ctx.beginPath();ctx.ellipse(x-r*.18,y-r*.2,r*.43,r*.66,-.28,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#7eae55";ctx.beginPath();ctx.ellipse(x+r*.2,y-r*.15,r*.38,r*.58,.24,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(39,79,42,.55)";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y-r*.78);ctx.lineTo(x-r*.22,y-r*.2);ctx.lineTo(x,y+r*.55);ctx.lineTo(x+r*.22,y-r*.2);ctx.closePath();ctx.stroke();
+  ctx.fillStyle="#f0c75f";
+  [-.18,.18,0].forEach((dx,i)=>{ctx.beginPath();ctx.moveTo(x+dx*r,y-r*(.48-i*.18));ctx.lineTo(x+dx*r-5,y-r*(.34-i*.18));ctx.lineTo(x+dx*r+5,y-r*(.34-i*.18));ctx.closePath();ctx.fill();});
+  ctx.restore();
+}
+
+function drawSycamoreTree(x,y,r) {
+  ctx.save();
+  ctx.fillStyle="rgba(47,77,43,.2)";ctx.beginPath();ctx.ellipse(x+8,y+13,r*1.08,r*.66,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#d9d1bd";ctx.lineWidth=9;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(x,y+24);ctx.lineTo(x,y-12);ctx.moveTo(x,y-3);ctx.lineTo(x-r*.22,y-r*.34);ctx.moveTo(x+1,y-5);ctx.lineTo(x+r*.26,y-r*.32);ctx.stroke();
+  ctx.strokeStyle="#816b51";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-4,y+10);ctx.lineTo(x+4,y+2);ctx.moveTo(x-5,y-6);ctx.lineTo(x+5,y-12);ctx.stroke();
+  [[-.36,-.16],[.33,-.18],[0,-.38],[-.1,.22],[.25,.18]].forEach(([dx,dy],i)=>{
+    ctx.fillStyle=i%2?"#668e54":"#547f49";ctx.beginPath();ctx.arc(x+dx*r,y+dy*r,r*.46,0,Math.PI*2);ctx.fill();
+  });
+  ctx.strokeStyle="rgba(42,78,45,.48)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*.78,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+
+function drawMapleTree(x,y,r) {
+  ctx.save();
+  ctx.fillStyle="rgba(76,43,35,.16)";ctx.beginPath();ctx.ellipse(x+7,y+12,r*.94,r*.54,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#5d3329";ctx.lineWidth=5;ctx.lineCap="round";
+  ctx.beginPath();
+  ctx.moveTo(x,y+22);ctx.lineTo(x,y-4);
+  ctx.moveTo(x,y-1);ctx.quadraticCurveTo(x-r*.22,y-r*.14,x-r*.48,y-r*.22);
+  ctx.moveTo(x,y-3);ctx.quadraticCurveTo(x+r*.22,y-r*.15,x+r*.48,y-r*.24);
+  ctx.moveTo(x-1,y-8);ctx.quadraticCurveTo(x-r*.12,y-r*.28,x-r*.28,y-r*.4);
+  ctx.moveTo(x+1,y-8);ctx.quadraticCurveTo(x+r*.12,y-r*.3,x+r*.3,y-r*.42);
+  ctx.stroke();
+  [
+    [-.42,-.3,"#7e2730",1.05],[-.28,-.45,"#96313a",.92],[-.08,-.52,"#a9433f",1],
+    [.18,-.48,"#8d2d38",.95],[.42,-.3,"#6f2430",1.05],[.3,-.12,"#9e3b39",.9],
+    [-.32,-.08,"#8a2d35",.95],[-.04,-.19,"#b24d42",1.08],[.08,-.32,"#7c2832",.88]
+  ].forEach(([dx,dy,color,scale],i)=>drawJapaneseMapleCluster(x+dx*r,y+dy*r,r*.2*scale,color,i*.8));
+  ctx.strokeStyle="rgba(91,42,35,.45)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-r*.21,r*.62,Math.PI*.08,Math.PI*.92);ctx.stroke();
+  ctx.restore();
+}
+
+function drawJapaneseMapleCluster(x,y,size,color,phase=0) {
+  ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(phase)*.2);
+  ctx.fillStyle=color;
+  ctx.beginPath();ctx.ellipse(0,0,size*1.05,size*.72,-.16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="rgba(255,160,126,.16)";
+  ctx.beginPath();ctx.ellipse(-size*.28,-size*.16,size*.42,size*.25,-.3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(75,34,31,.34)";ctx.lineWidth=2;ctx.lineCap="round";
+  ctx.beginPath();
+  ctx.moveTo(-size*.72,0);ctx.lineTo(size*.72,0);
+  ctx.moveTo(-size*.28,size*.45);ctx.lineTo(size*.18,-size*.48);
+  ctx.moveTo(size*.28,size*.42);ctx.lineTo(-size*.12,-size*.46);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawCampusDetails() {
