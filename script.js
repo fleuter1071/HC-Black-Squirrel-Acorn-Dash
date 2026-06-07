@@ -68,7 +68,7 @@ const hazardRoutes = [
   { type:"student", style:"books", color:"#e0a539", skin:"#c98e70", hair:"#a05d38", speed:74, radius:18, points:[[410,650],[680,705],[810,615],[550,535]], offset:3.4 },
   { type:"bike", style:"helmet", color:"#4779a2", frame:"#315f76", skin:"#d99b72", hair:"#52372b", speed:155, radius:20, points:[[140,405],[470,405],[780,450],[1030,665],[1420,640]], offset:1 },
   { type:"bike", style:"basket", color:"#6d4c91", frame:"#7c4c52", skin:"#7f563f", hair:"#25221e", speed:140, radius:20, points:[[1060,900],[1015,715],[950,535],[730,420]], offset:3 },
-  { type:"cart", style:"campus", color:"#ede9d3", speed:105, radius:28, points:[[1440,640],[1200,640],[1010,714],[820,616],[490,670]], offset:2.3 }
+  { type:"cart", style:"security", color:"#f2eddc", speed:105, radius:28, points:[[1440,640],[1200,640],[1010,714],[820,616],[490,670]], offset:2.3 }
 ];
 
 let state;
@@ -91,7 +91,7 @@ function newState() {
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null,
-    activePowerups: { pancake:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0 }, skeetersDeliveries:0, skeetersBlocks:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    activePowerups: { pancake:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0 }, skeetersDeliveries:0, skeetersBlocks:0, chuckWaves:0, chuckCheckIns:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
   };
@@ -271,7 +271,9 @@ function updateNearMiss(hazard) {
   const gap=distance(state.player,hazard),threshold=state.player.r+hazard.radius+25;
   hazard.nearMissReady??=true;
   if(gap<threshold&&gap>state.player.r+hazard.radius&&hazard.nearMissReady){
-    hazard.nearMissReady=false;state.score++;state.dodges++;addScorePop(state.player.x,state.player.y-22,"NICE DODGE! +1","#dfffa8",17);playSound("dodge");
+    hazard.nearMissReady=false;state.score++;state.dodges++;
+    if(hazard.type==="cart")state.chuckWaves++;
+    addScorePop(state.player.x,state.player.y-22,hazard.type==="cart"?"CHUCK WAVES! +1":"NICE DODGE! +1",hazard.type==="cart"?"#fff0a8":"#dfffa8",17);playSound("dodge");
   }
   if(gap>threshold+55)hazard.nearMissReady=true;
 }
@@ -384,13 +386,14 @@ function bump(hazard) {
   const lost = state.score > 0 ? 1 : 0;
   state.score -= lost;
   if (lost) spillAcorn(hazard.type === "bike" ? 2 : 1);
+  if(hazard.type==="cart")state.chuckCheckIns++;
   const reaction = hazard.type === "cart"
-    ? { text:"WHOA!", color:"#ffe56b", stars:true }
+    ? { text:"CHUCK!", color:"#ffe56b", stars:true }
     : hazard.type === "bike"
       ? { text:"Bike lane!", color:"#fff5da", stars:false }
       : { text:"Sorry, SBS!", color:"#fff5da", stars:false };
   state.reactions.push({ x:state.player.x, y:state.player.y-28, life:1.05, ...reaction });
-  const label = hazard.type === "cart" ? "Golf cart spinout!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
+  const label = hazard.type === "cart" ? "Chuck checked on SBS!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
   showToast(`${label}${lost ? " Grab that runaway acorn!" : ""}`);
   spawnParticles(state.player.x, state.player.y, "#ffffff");
   playSound(hazard.type==="cart" ? "wobble" : "bump");
@@ -925,19 +928,40 @@ function drawBikeHazard(h) {
 }
 
 function drawCartHazard(h) {
-  ctx.strokeStyle="rgba(35,52,43,.42)";ctx.lineWidth=6;ctx.lineCap="round";
-  ctx.beginPath();ctx.moveTo(-46,1);ctx.lineTo(-64,1);ctx.moveTo(-45,13);ctx.lineTo(-59,13);ctx.stroke();
-  ctx.fillStyle="#e5dec4";roundRect(-34,-19,68,39,8);ctx.fill();ctx.strokeStyle="#556354";ctx.lineWidth=4;ctx.stroke();
-  ctx.fillStyle="#f4efd8";roundRect(-25,-13,30,22,5);ctx.fill();
-  ctx.fillStyle="#8a9b7b";roundRect(5,-12,23,21,5);ctx.fill();
-  ctx.fillStyle="#536949";roundRect(-22,-34,44,16,3);ctx.fill();
-  ctx.fillStyle="#d8e5d6";roundRect(-16,-31,30,10,2);ctx.fill();
-  ctx.strokeStyle="#536949";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-24,-35);ctx.lineTo(-24,-45);ctx.lineTo(24,-45);ctx.lineTo(24,-34);ctx.stroke();
-  ctx.fillStyle="#f4d455";ctx.beginPath();ctx.arc(28,-6,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffd86b";ctx.beginPath();ctx.moveTo(34,-8);ctx.lineTo(47,-15);ctx.lineTo(47,0);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#b83e31";ctx.fillRect(-32,-10,7,8);
-  ctx.fillStyle="#315440";ctx.font="900 10px Nunito";ctx.textAlign="center";ctx.fillText("HC",3,8);ctx.textAlign="left";
-  ctx.fillStyle="#efc3a1";ctx.beginPath();ctx.arc(2,-23,7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5b4334";ctx.beginPath();ctx.arc(2,-25,7,Math.PI,0);ctx.fill();
-  [-19,19].forEach(x=>{ctx.fillStyle="#24322d";ctx.beginPath();ctx.arc(x,20,8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#6e7a67";ctx.beginPath();ctx.arc(x,20,4,0,Math.PI*2);ctx.fill();});
+  const beaconPulse=.75+.25*Math.sin(state.elapsed*7+h.offset);
+  ctx.strokeStyle="rgba(35,52,43,.42)";ctx.lineWidth=7;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-52,0);ctx.lineTo(-70,0);ctx.moveTo(-50,15);ctx.lineTo(-64,15);ctx.stroke();
+  ctx.fillStyle="rgba(255,196,64,.18)";ctx.beginPath();ctx.arc(0,-31,23*beaconPulse,0,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle="#f1ecda";roundRect(-42,-24,84,48,10);ctx.fill();
+  ctx.strokeStyle="#43584a";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#dfe8df";roundRect(2,-18,31,30,6);ctx.fill();
+  ctx.fillStyle="#e8f1ec";roundRect(-31,-17,28,29,6);ctx.fill();
+  ctx.fillStyle="#536b54";roundRect(-42,3,84,9,3);ctx.fill();
+  ctx.fillStyle="#f8f3df";roundRect(-25,5,50,10,3);ctx.fill();
+  ctx.fillStyle="#315440";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("SECURITY",0,13);
+
+  ctx.fillStyle="#f6cf57";roundRect(-11,-33,22,8,3);ctx.fill();
+  ctx.fillStyle="#fff1a6";ctx.globalAlpha=.8;roundRect(-6,-31,12,4,2);ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle="#ffd86b";ctx.beginPath();ctx.arc(39,-8,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="rgba(255,216,107,.75)";ctx.beginPath();ctx.moveTo(42,-10);ctx.lineTo(58,-17);ctx.lineTo(58,2);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#c45d41";ctx.fillRect(-42,-12,6,9);
+
+  drawChuckDriver();
+  [-24,24].forEach(x=>{ctx.fillStyle="#20302b";ctx.beginPath();ctx.arc(x,24,9,0,Math.PI*2);ctx.fill();ctx.fillStyle="#7c8874";ctx.beginPath();ctx.arc(x,24,4,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle="#315440";roundRect(-23,26,46,6,3);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 7px Nunito";ctx.textAlign="center";ctx.fillText("CHUCK",0,31);ctx.textAlign="left";
+}
+
+function drawChuckDriver() {
+  const wave=Math.sin(state.elapsed*8)*.24;
+  ctx.strokeStyle="#efc3a1";ctx.lineWidth=4;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(15,-8);ctx.lineTo(27,-15+wave*10);ctx.stroke();
+  ctx.fillStyle="#efc3a1";ctx.beginPath();ctx.arc(0,-11,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#4f3a2d";ctx.beginPath();ctx.arc(0,-14,8,Math.PI,0);ctx.fill();
+  ctx.fillStyle="#23332e";ctx.beginPath();ctx.arc(-3,-11,1.3,0,Math.PI*2);ctx.arc(4,-11,1.3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#7a4a38";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(1,-9,4,.15,Math.PI-.15);ctx.stroke();
+  ctx.fillStyle="#315440";roundRect(-9,-3,18,12,5);ctx.fill();
 }
 
 function drawPlayer() {
