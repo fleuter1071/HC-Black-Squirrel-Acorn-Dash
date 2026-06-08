@@ -77,7 +77,7 @@ canvas { display: block; width: 100%; height: 100%; }
 .item-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .item-legend em { color: var(--forest); font-style: normal; font-weight: 900; }
 .legend-icon { display: inline-grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; font-size: 8px; }
-.pancake-icon { color: #8b5929; background: #edbb5e; }
+.soup-icon { color: #fff1bd; background: #6f7441; }
 .leaf-icon { color: #e9f5ae; background: #75a94e; transform: rotate(45deg); }
 .scroll-icon { color: #487053; border-radius: 3px; background: #f1dfaa; font-size: 7px; }
 .pie-icon { color: #8e4d28; border: 2px solid #d77737; border-radius: 3px; background: #fff0c2; font-size: 7px; }
