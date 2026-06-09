@@ -14,6 +14,8 @@ const POWERUP_LIFETIME = 14;
 const FIRST_POWERUP_AT = 38;
 const SKEETERS_SHIELD_SECONDS = 8;
 const SKEETERS_BOOST_SECONDS = 2;
+const CAPE_SECONDS = 7;
+const CAPE_SPEED_MULTIPLIER = 1.22;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -59,7 +61,8 @@ const powerupTypes = [
   { id:"soup", name:"Mysterious DC Mushroom Soup", shortName:"DC Soup", popName:"DC SOUP", note:"Mysterious DC mushroom soup: questionable, but fast!", duration:7, weight:3 },
   { id:"leaf", name:"Arboretum Leaf", note:"Secret landmark stashes are glowing!", duration:9, weight:3 },
   { id:"scroll", name:"Honor Code Scroll", note:"SBS is bump-proof for a few seconds!", duration:6, weight:3 },
-  { id:"skeeters", name:"Skeeter's Pie", note:"Skeeter's Pie! Late-night delivery mode.", duration:SKEETERS_SHIELD_SECONDS, weight:3 }
+  { id:"skeeters", name:"Skeeter's Pie", note:"Skeeter's Pie! Late-night delivery mode.", duration:SKEETERS_SHIELD_SECONDS, weight:3 },
+  { id:"cape", name:"Super SBS Cape", shortName:"Super SBS", popName:"SUPER SBS!", note:"Super SBS takes flight!", duration:CAPE_SECONDS, weight:3 }
 ];
 
 const hazardRoutes = [
@@ -90,8 +93,8 @@ function newState() {
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
-    particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null,
-    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0 }, skeetersDeliveries:0, skeetersBlocks:0, chuckWaves:0, chuckCheckIns:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null, powerupBag: [],
+    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
   };
@@ -178,7 +181,7 @@ function update(dt) {
   const dy = clamp((keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0)+joystick.y,-1,1);
   state.player.moving = Boolean(dx || dy);
   const mag = Math.hypot(dx, dy)||1;
-  const boost = Math.max(state.activePowerups.soup > 0 ? 1.48 : 1, state.activePowerups.skeetersBoost > 0 ? 1.32 : 1);
+  const boost = Math.max(state.activePowerups.soup > 0 ? 1.48 : 1, state.activePowerups.skeetersBoost > 0 ? 1.32 : 1, state.activePowerups.cape > 0 ? CAPE_SPEED_MULTIPLIER : 1);
   const speed = PLAYER_SPEED * boost;
   const targetVx=dx/mag*speed,targetVy=dy/mag*speed;
   const ease=1-Math.exp(-(dx||dy?13:18)*dt);
@@ -224,7 +227,7 @@ function update(dt) {
     if (!acorn.collected && distance(state.player, acorn) < 31) collectSpill(acorn);
   });
   state.spills = state.spills.filter(acorn => !acorn.collected && acorn.life > 0);
-  if (!state.player.invulnerable && state.activePowerups.scroll <= 0) {
+  if (!state.player.invulnerable && state.activePowerups.scroll <= 0 && state.activePowerups.cape <= 0) {
     for (const hazard of state.hazards) {
       if (distance(state.player, hazard) < state.player.r + hazard.radius) {
         if (state.activePowerups.skeeters > 0) blockWithSkeetersPie(hazard);
@@ -273,7 +276,8 @@ function updateNearMiss(hazard) {
   if(gap<threshold&&gap>state.player.r+hazard.radius&&hazard.nearMissReady){
     hazard.nearMissReady=false;state.score++;state.dodges++;
     if(hazard.type==="cart")state.chuckWaves++;
-    addScorePop(state.player.x,state.player.y-22,hazard.type==="cart"?"CHUCK WAVES! +1":"NICE DODGE! +1",hazard.type==="cart"?"#fff0a8":"#dfffa8",17);playSound("dodge");
+    const flying=state.activePowerups.cape>0;
+    addScorePop(state.player.x,state.player.y-22,flying?"SOARING! +1":hazard.type==="cart"?"CHUCK WAVES! +1":"NICE DODGE! +1",flying?"#ffe56b":hazard.type==="cart"?"#fff0a8":"#dfffa8",17);playSound("dodge");
   }
   if(gap>threshold+55)hazard.nearMissReady=true;
 }
@@ -330,22 +334,32 @@ function collectPowerup() {
     state.activePowerups.skeetersBoost = SKEETERS_BOOST_SECONDS;
     state.skeetersDeliveries++;
   }
+  if (type.id === "cape") {
+    state.capeFlights++;
+    spawnCapeSparkles(x, y);
+    state.reactions.push({ x:state.player.x, y:state.player.y-36, life:1.15, text:"UP, SBS!", color:"#fff1bd", stars:true });
+  }
   state.powerup = null;
   state.nextPowerupAt = state.elapsed + POWERUP_INTERVAL;
-  spawnParticles(x, y, type.id === "leaf" ? "#b7df70" : type.id === "skeeters" ? "#ffb45d" : "#ffe38a");
+  spawnParticles(x, y, type.id === "leaf" ? "#b7df70" : type.id === "skeeters" ? "#ffb45d" : type.id === "cape" ? "#8b0000" : "#ffe38a");
   addScorePop(x, y, type.popName || type.name.toUpperCase(), "#f7f2bf");
   showToast(type.note);
-  playSound("powerup");
+  playSound(type.id === "cape" ? "cape" : "powerup");
 }
 
 function choosePowerupType() {
-  const total=powerupTypes.reduce((sum,type)=>sum+(type.weight||1),0);
-  let pick=Math.random()*total;
-  for (const type of powerupTypes) {
-    pick-=type.weight||1;
-    if (pick<=0) return type;
+  if (!state.powerupBag.length) state.powerupBag = makePowerupBag();
+  const nextId = state.powerupBag.pop();
+  return powerupTypes.find(type => type.id === nextId) || powerupTypes[0];
+}
+
+function makePowerupBag() {
+  const bag = powerupTypes.flatMap(type => Array.from({ length:type.weight || 1 }, () => type.id));
+  for (let i=bag.length-1; i>0; i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [bag[i],bag[j]]=[bag[j],bag[i]];
   }
-  return powerupTypes[0];
+  return bag;
 }
 
 function spawnGoldenAcorn() {
@@ -826,13 +840,14 @@ function drawPowerup(p) {
   if(p.type.id==="soup")drawSoupPowerup();
   else if(p.type.id==="leaf")drawLeafPowerup();
   else if(p.type.id==="scroll")drawScrollPowerup();
-  else drawSkeetersPiePowerup();
+  else if(p.type.id==="skeeters")drawSkeetersPiePowerup();
+  else drawCapePowerup();
   ctx.restore();
 }
 
 function drawPowerupRing(type) {
   const pulse=Math.sin(state.elapsed*6);
-  const colors={soup:"#d4d07d",leaf:"#caff75",scroll:"#bde8ff",skeeters:"#ffb45d"};
+  const colors={soup:"#d4d07d",leaf:"#caff75",scroll:"#bde8ff",skeeters:"#ffb45d",cape:"#8b0000"};
   ctx.save();ctx.globalAlpha=.42+.12*pulse;ctx.strokeStyle=colors[type]||"#fff5a6";ctx.lineWidth=4;
   ctx.beginPath();ctx.arc(0,2,30+pulse*3,0,Math.PI*2);ctx.stroke();
   ctx.globalAlpha=.2;ctx.fillStyle=colors[type]||"#fff5a6";ctx.beginPath();ctx.arc(0,2,35,0,Math.PI*2);ctx.fill();ctx.restore();
@@ -887,6 +902,26 @@ function drawSkeetersPiePowerup() {
   ctx.fillStyle="#b94234";[[7,-14],[-9,-10],[12,-1],[-5,6],[1,-3]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.3,0,Math.PI*2);ctx.fill();});
   ctx.fillStyle="#fff1a8";[[-3,-15],[9,7],[-13,0]].forEach(([x,y])=>{ctx.beginPath();ctx.ellipse(x,y,2.7,1.4,.35,0,Math.PI*2);ctx.fill();});
   ctx.restore();
+}
+
+function drawCapePowerup() {
+  const flutter=Math.sin(state.elapsed*6)*2;
+  ctx.save();ctx.rotate(Math.sin(state.elapsed*4)*.07);ctx.shadowColor="#ffdf69";ctx.shadowBlur=20;
+  ctx.fillStyle="rgba(255,229,107,.2)";ctx.beginPath();ctx.arc(0,1,28,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle="#8b0000";ctx.beginPath();
+  ctx.moveTo(-8,-24);ctx.bezierCurveTo(8,-26,22,-14,18,4+flutter);
+  ctx.bezierCurveTo(13,24,-8,26,-20,9);ctx.bezierCurveTo(-13,3,-15,-13,-8,-24);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle="#7a2e25";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#a51c30";ctx.beginPath();
+  ctx.moveTo(-5,-19);ctx.bezierCurveTo(8,-18,15,-8,12,4+flutter*.5);
+  ctx.bezierCurveTo(7,15,-7,17,-14,6);ctx.bezierCurveTo(-10,0,-11,-11,-5,-19);
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle="#fff1bd";ctx.beginPath();ctx.arc(0,-1,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#8b0000";ctx.font="900 14px Lato";ctx.textAlign="center";ctx.fillText("S",0,4);
+  ctx.fillStyle="#ffe56b";for(let i=0;i<4;i++){const a=state.elapsed*2+i*Math.PI/2;ctx.beginPath();ctx.arc(Math.cos(a)*28,Math.sin(a)*22,2.4,0,Math.PI*2);ctx.fill();}
+  ctx.textAlign="left";ctx.restore();
 }
 
 function drawHazard(h) {
@@ -978,9 +1013,13 @@ function drawPlayer() {
   ctx.save();ctx.translate(p.x,p.y);
   if(p.secretDance>0)ctx.rotate(Math.sin((.55-p.secretDance)*30)*.32);
   ctx.rotate(p.spin ? (1-p.spin) * 18 : 0);ctx.scale(p.facing,1);
-  const stride=Math.sin(p.bob),hop=p.moving?Math.abs(stride)*4:Math.sin(state.elapsed*2)*1.5;ctx.translate(0,-hop);
+  const flying=state.activePowerups.cape>0;
+  const stride=Math.sin(p.bob),hop=p.moving?Math.abs(stride)*4:Math.sin(state.elapsed*2)*1.5,flightLift=flying?14+Math.sin(state.elapsed*6)*3:0;
+  ctx.fillStyle=flying?"rgba(20,38,30,.14)":"rgba(20,38,30,.22)";
+  ctx.beginPath();ctx.ellipse(0,flying?30:23,flying?18:27,flying?6:10,0,0,Math.PI*2);ctx.fill();
+  ctx.translate(0,-hop-flightLift);
   if(p.secretDance>0)ctx.translate(0,-Math.sin((.55-p.secretDance)*Math.PI/.55)*8);
-  ctx.fillStyle="rgba(20,38,30,.22)";ctx.beginPath();ctx.ellipse(0,23,27,10,0,0,Math.PI*2);ctx.fill();
+  if(flying)drawSuperCape(stride);
   const tailSwing=Math.sin(state.elapsed*(p.moving?10:3))*.24;
   ctx.fillStyle="#101b18";ctx.beginPath();ctx.ellipse(-29,-5,33,25,-.78+tailSwing,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#1f2c28";ctx.beginPath();ctx.ellipse(-35,-13,21,17,-.78+tailSwing,0,Math.PI*2);ctx.fill();
@@ -1004,8 +1043,30 @@ function drawPlayer() {
   ctx.fillStyle="#f3b543";ctx.beginPath();ctx.arc(-1,7,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#fff1bd";ctx.lineWidth=2;ctx.stroke();
   ctx.fillStyle="#fff";ctx.font="900 7px Nunito";ctx.textAlign="center";ctx.fillText("SBS",-1,10);
   if(state.activePowerups.soup>0){ctx.strokeStyle="rgba(212,208,125,.72)";ctx.lineWidth=4;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-44-i*13,-10+i*10);ctx.lineTo(-62-i*13,-10+i*10);ctx.stroke();}}
-  if(state.activePowerups.scroll>0){ctx.strokeStyle="#fff0a0";ctx.lineWidth=4;ctx.globalAlpha=.7+.2*Math.sin(state.elapsed*8);ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.stroke();}
+  if(state.activePowerups.scroll>0){ctx.save();ctx.strokeStyle="#fff0a0";ctx.lineWidth=4;ctx.globalAlpha=.7+.2*Math.sin(state.elapsed*8);ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.stroke();ctx.restore();}
   if(state.activePowerups.skeeters>0)drawSkeetersBoxShield();
+  if(flying)drawCapeFlightTrail();
+  ctx.restore();
+}
+
+function drawSuperCape(stride) {
+  const flutter=Math.sin(state.elapsed*9)*4+stride*2;
+  ctx.save();
+  ctx.fillStyle="#8b0000";ctx.strokeStyle="#4d0000";ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(-4,-8);ctx.bezierCurveTo(-23,-20,-49,-16,-55,1+flutter);
+  ctx.bezierCurveTo(-38,8+flutter,-28,21,-5,12);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="#a51c30";ctx.beginPath();
+  ctx.moveTo(-7,-5);ctx.bezierCurveTo(-24,-11,-38,-8,-45,2+flutter*.5);
+  ctx.bezierCurveTo(-29,5+flutter*.5,-21,12,-7,9);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+
+function drawCapeFlightTrail() {
+  ctx.save();
+  ctx.strokeStyle="rgba(255,229,107,.76)";ctx.lineWidth=3;ctx.lineCap="round";
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-42-i*13,-15+i*10);ctx.lineTo(-60-i*13,-15+i*10);ctx.stroke();}
+  ctx.fillStyle="#ffe56b";for(let i=0;i<3;i++){const a=state.elapsed*4+i*2.1;ctx.beginPath();ctx.arc(-39+Math.cos(a)*12,-20+Math.sin(a)*18,2,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
 
@@ -1112,6 +1173,7 @@ function getRank() {
 
 function getBestMoment() {
   if(state.secrets===landmarks.length)return "found every campus secret.";
+  if(state.capeFlights>0)return "sent Super SBS flying over campus trouble.";
   if(state.skeetersBlocks>0)return "saved the stash with a Skeeter's pizza box.";
   if(state.skeetersDeliveries>0)return "completed a heroic Skeeter's delivery.";
   if(state.bestCombo>=10)return `built a ${state.bestCombo}x scurry streak.`;
@@ -1186,6 +1248,13 @@ function spawnPizzaCrumbs(x,y) {
   for(let i=0;i<12;i++){
     const a=Math.PI*2*i/12, speed=55+(i%4)*18;
     state.particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.7,color:i%3?"#ffd271":"#fff1bd"});
+  }
+}
+
+function spawnCapeSparkles(x,y) {
+  for(let i=0;i<18;i++){
+    const a=Math.PI*2*i/18, speed=70+(i%5)*18;
+    state.particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.9,color:i%3?"#ffe56b":"#8b0000"});
   }
 }
 
@@ -1270,6 +1339,7 @@ function playSound(name){
     acorn:[[740,.07,"triangle",0,.035]],
     golden:[[784,.08,"triangle",0],[1047,.1,"triangle",.09],[1319,.16,"triangle",.2]],
     powerup:[[587,.08,"triangle",0],[784,.13,"triangle",.1]],
+    cape:[[523,.07,"triangle",0,.05],[784,.09,"triangle",.08,.05],[1175,.14,"triangle",.18,.045]],
     dodge:[[860,.05,"triangle",0,.035],[1020,.08,"triangle",.07,.03]],
     bump:[[165,.1,"square",0],[125,.16,"sawtooth",.08]],
     wobble:[[180,.1,"sawtooth",0],[145,.1,"sawtooth",.1],[115,.18,"sawtooth",.2]],
