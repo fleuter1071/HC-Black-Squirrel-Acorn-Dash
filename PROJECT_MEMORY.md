@@ -2,6 +2,107 @@
 
 Session notes will be appended here as the game evolves.
 
+## 2026-06-09 - Blue Bus Stokes Bay route implementation
+
+- Date/time
+  - 2026-06-09, America/New_York.
+- Feature name, work name, description, and value provided
+  - Added the Bi-Co Blue Bus to gameplay as a dedicated top-edge Stokes Bay shuttle event.
+  - Kept the bus away from the central student/bike/cart convergence so it reads as its own campus moment instead of clutter.
+  - Added a Stokes Bay / Blue Bus Stop visual area, waiting students, custom Blue Bus rendering, bus dwell timing, bus-specific rectangular collision, and a Blue Bus near-miss reward.
+- Files changed
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Added `BLUE_BUS_SPEED` and `BLUE_BUS_DWELL_SECONDS` near the top of `script.js`.
+  - Added a `type:"bus"` hazard route that enters from the right, travels along the upper campus edge, pauses at Stokes Bay, and resets off-route instead of looping through the central paths.
+  - Added bus-specific collision helpers so a long bus does not use the same circular collision model as students and bikes.
+  - Added `drawBlueBusRoad`, `drawBusStopSign`, `drawWaitingStudents`, and custom Blue Bus drawing helpers.
+- Assumptions
+  - The first implementation should make the bus an iconic environmental hazard/event, not yet a Bryn Mawr portal.
+  - Side-view bus readability matters more than strict top-down perspective because alumni recognition is the point of this feature.
+  - Stokes Bay should be the first map anchor for future Blue Bus mechanics.
+- Known limitations
+  - Browser visual QA could not be completed because the in-app browser helper hit a Windows sandbox startup issue.
+  - The SVG sprite asset remains available, but the live gameplay implementation currently uses canvas drawing helpers rather than loading the SVG.
+  - Bus size, collision width, dwell time, and route spacing should be playtested on desktop and mobile.
+- Key learnings that you can bring with you to future sessions
+  - Large nostalgia objects need their own spatial lane; placing the bus in the existing traffic knot would reduce readability and increase frustration.
+  - Long hazards should use shape-aware collision instead of center-distance checks.
+  - The Blue Bus can be introduced as a recurring campus moment before becoming a Bryn Mawr world-transition mechanic.
+- Remaining TODOs
+  - Visually QA the bus route, Stokes Bay label, stop sign, and waiting students in-browser.
+  - Playtest whether the bus collision feels fair and whether the near-miss reward is understandable.
+  - Decide whether the next Blue Bus feature should be a timed challenge, token pickup, or Bryn Mawr portal.
+- Next steps
+  - Open the static app locally and confirm the bus appears along the upper route, pauses at Stokes Bay, and does not interfere with the main acorn path.
+
+## 2026-06-09 - Blue Bus sprite asset
+
+- Date/time
+  - 2026-06-09, America/New_York.
+- Feature name, work name, description, and value provided
+  - Created a reusable Bi-Co Blue Bus sprite asset based on the user-provided reference image.
+  - Preserved the strongest recognition cues: Haverford red rear section, Bryn Mawr blue front section, large school names, dark window band, diagonal stripe bridge, black wheels, and front door.
+  - Added an asset reference to the Blue Bus module notes so future gameplay work can find it quickly.
+- Files changed
+  - `assets/blue-bus-sprite.svg`
+  - `BLUE_BUS_MODULE_NOTES.md`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Added the bus as an SVG sprite asset rather than gameplay code.
+  - Kept the asset transparent, scalable, and readable for future canvas integration.
+  - Chose a side-view sprite because the attached reference is side-view and the bus should be instantly recognizable as the actual Bi-Co shuttle.
+- Assumptions
+  - The first useful asset should prioritize alumni recognition over strict top-down perspective.
+  - Future code can load the SVG as an image or use it as a visual reference for canvas-drawn bus helpers.
+- Known limitations
+  - The sprite is not yet integrated into `script.js`.
+  - Readability should be checked in-game at the final hazard/platform size before shipping.
+- Key learnings that you can bring with you to future sessions
+  - The Blue Bus needs only a few large cues to read: red/blue split, white school names, diagonal stripes, window band, and bus silhouette.
+  - For nostalgia assets, exact detail matters less than preserving the visual pattern alumni remember.
+- Remaining TODOs
+  - Decide where the bus enters the game: Stokes Bay hazard, timed challenge, moving platform, or Bryn Mawr portal.
+  - Load or draw the sprite in `script.js` when implementing the Blue Bus feature.
+  - QA the sprite at gameplay scale on desktop and mobile.
+- Next steps
+  - Use `assets/blue-bus-sprite.svg` as the source asset for future Blue Bus gameplay work.
+
+## 2026-06-09 - Blue Bus module reference ingestion
+
+- Date/time
+  - 2026-06-09, America/New_York.
+- Feature name, work name, description, and value provided
+  - Captured user-provided nostalgia, gameplay ideas, and visual reference details for a future Bi-Co Blue Bus feature.
+  - Preserved the Blue Bus as a Haverford/Bryn Mawr connection object: class travel, social life, Stokes Bay waiting, shuttle timing, and the in-between feeling of moving between campuses.
+  - Added a dedicated reference file so future sessions can build from the lore and visual identity without re-asking for context.
+- Files changed
+  - `BLUE_BUS_MODULE_NOTES.md`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - No code changes.
+  - Stored the concept as documentation first, keeping future implementation optional and avoiding premature feature complexity.
+  - Recommended future shape: a recurring Stokes Bay event first, then a Bryn Mawr portal or bonus route if the concept proves valuable.
+- Assumptions
+  - The provided Blue Bus description and image should be treated as user-provided source material for future product design.
+  - The Blue Bus should feel specific to the Bi-Co ecosystem, not like generic public transportation.
+  - Future implementation should preserve the main campus game as a standalone static experience.
+- Known limitations
+  - The image was referenced from the current chat, but no separate local image asset was added to the repo.
+  - Specific route placement, bus scale, collision rules, and Bryn Mawr bonus-level scope still need design before implementation.
+- Key learnings that you can bring with you to future sessions
+  - The Blue Bus can carry three jobs at once: alumni nostalgia object, gameplay hazard, and world-transition mechanic.
+  - Stokes Bay is the strongest Haverford-side anchor for the feature.
+  - The key visual recognition signals are the Haverford red rear section, Bryn Mawr blue front section, large school names, dark window band, and diagonal stripe motif.
+- Remaining TODOs
+  - Decide whether the first implementation should be a map hazard, timed challenge, moving platform, collectible unlock, or Bryn Mawr portal.
+  - If implemented visually, draw a simplified bus that preserves the red-to-blue split and diagonal stripe identity from the reference image.
+  - Decide whether to add Stokes Bay as an explicit map label/location before adding the bus.
+- Next steps
+  - Use `BLUE_BUS_MODULE_NOTES.md` when planning any Blue Bus, Stokes Bay, Bi-Co, or Bryn Mawr expansion work.
+  - Define the smallest playable Blue Bus MVP before changing gameplay code.
+
 ## 2026-06-06 - DC hidden memory changed to dining tray
 
 - Date/time

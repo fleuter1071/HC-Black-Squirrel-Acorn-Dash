@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-labelledby="title desc">
+  <title id="title">Bi-Co Blue Bus sprite</title>
+  <desc id="desc">A side-view game sprite of the Haverford and Bryn Mawr Blue Bus with red rear section, blue front section, diagonal stripes, school names, windows, doors, and wheels.</desc>
+  <defs>
+    <linearGradient id="redBody" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#e93a4d"/>
+      <stop offset="0.55" stop-color="#c51f33"/>
+      <stop offset="1" stop-color="#941421"/>
+    </linearGradient>
+    <linearGradient id="blueBody" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0688df"/>
+      <stop offset="0.5" stop-color="#0067b8"/>
+      <stop offset="1" stop-color="#003f83"/>
+    </linearGradient>
+    <linearGradient id="windowGlass" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#12334d"/>
+      <stop offset="0.52" stop-color="#071827"/>
+      <stop offset="1" stop-color="#0c2d45"/>
+    </linearGradient>
+    <linearGradient id="tire" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2f3236"/>
+      <stop offset="0.58" stop-color="#050608"/>
+      <stop offset="1" stop-color="#26282c"/>
+    </linearGradient>
+    <filter id="softShadow" x="-5%" y="-20%" width="110%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="7" flood-color="#071827" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <path d="M37 79c0-25 18-43 43-43h741c41 0 72 22 84 61l13 43c6 20-7 40-28 40h-13v27H63v-27H37Z" fill="#071827" opacity="0.95"/>
+
+    <path d="M48 75c0-23 17-40 40-40h248v172H48Z" fill="url(#redBody)"/>
+    <path d="M336 35h480c38 0 67 21 78 57l14 47c5 17-8 34-26 34h-23v34H336Z" fill="url(#blueBody)"/>
+    <path d="M336 35h61v172h-61Z" fill="#edf2f5"/>
+
+    <path d="M48 75c0-23 17-40 40-40h728c38 0 67 21 78 57l14 47c5 17-8 34-26 34h-23v34H48Z" fill="none" stroke="#071827" stroke-width="10" stroke-linejoin="round"/>
+
+    <path d="M80 53h725c32 0 56 18 65 48l9 31H81Z" fill="#09253d"/>
+    <path d="M94 61h70v62H83V75c0-8 4-14 11-14Z" fill="url(#windowGlass)"/>
+    <path d="M178 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M262 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M407 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M491 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M575 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M659 61h70v62h-70Z" fill="url(#windowGlass)"/>
+    <path d="M743 61h67c27 0 44 16 53 44l6 18H743Z" fill="url(#windowGlass)"/>
+
+    <g opacity="0.5">
+      <path d="M101 68h48" stroke="#4ba9d7" stroke-width="7" stroke-linecap="round"/>
+      <path d="M418 68h40" stroke="#4ba9d7" stroke-width="7" stroke-linecap="round"/>
+      <path d="M503 68h40" stroke="#4ba9d7" stroke-width="7" stroke-linecap="round"/>
+      <path d="M674 68h39" stroke="#4ba9d7" stroke-width="7" stroke-linecap="round"/>
+    </g>
+
+    <path d="M837 60h40c15 0 28 10 33 25l16 51c4 13-6 26-20 26h-69Z" fill="#06121f" stroke="#1b83ca" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M849 72h27c9 0 17 6 20 15l12 38h-59Z" fill="#0b2d45"/>
+    <path d="M843 161h66v45h-66Z" fill="#05243f"/>
+    <path d="M853 168h46" stroke="#5fc0ff" stroke-width="4"/>
+    <path d="M853 184h46" stroke="#5fc0ff" stroke-width="4"/>
+
+    <path d="M354 37 512 207h-46L307 37Z" fill="#f6f8fa"/>
+    <path d="M401 37 559 207h-24L377 37Z" fill="#0a72ba"/>
+    <path d="M431 37 589 207h-18L414 37Z" fill="#f6f8fa"/>
+    <path d="M271 37 430 207h-23L248 37Z" fill="#f6f8fa" opacity="0.9"/>
+    <path d="M222 37 380 207h-15L207 37Z" fill="#f6f8fa" opacity="0.8"/>
+
+    <text x="187" y="159" text-anchor="middle" fill="#fff9ee" font-family="Georgia, serif" font-size="42" font-weight="700" letter-spacing="-1">HAVERFORD</text>
+    <text x="187" y="190" text-anchor="middle" fill="#fff9ee" font-family="Georgia, serif" font-size="28" font-weight="700" letter-spacing="1.5">COLLEGE</text>
+    <text x="656" y="154" text-anchor="middle" fill="#fff9ee" font-family="Georgia, serif" font-size="43" font-weight="700" letter-spacing="1">BRYN MAWR</text>
+    <text x="656" y="185" text-anchor="middle" fill="#fff9ee" font-family="Georgia, serif" font-size="25" font-weight="700" letter-spacing="3">COLLEGE</text>
+
+    <path d="M55 194h808" stroke="#06121f" stroke-width="6" opacity="0.7"/>
+    <path d="M65 201h275" stroke="#ff5865" stroke-width="5" opacity="0.6"/>
+    <path d="M407 201h405" stroke="#1687dc" stroke-width="5" opacity="0.65"/>
+
+    <g>
+      <circle cx="305" cy="208" r="45" fill="url(#tire)"/>
+      <circle cx="305" cy="208" r="28" fill="#11151a"/>
+      <circle cx="305" cy="208" r="14" fill="#343b43"/>
+      <path d="M305 173v70M270 208h70M280 183l50 50M330 183l-50 50" stroke="#050608" stroke-width="5" opacity="0.6"/>
+    </g>
+    <g>
+      <circle cx="807" cy="208" r="45" fill="url(#tire)"/>
+      <circle cx="807" cy="208" r="28" fill="#11151a"/>
+      <circle cx="807" cy="208" r="14" fill="#343b43"/>
+      <path d="M807 173v70M772 208h70M782 183l50 50M832 183l-50 50" stroke="#050608" stroke-width="5" opacity="0.6"/>
+    </g>
+
+    <path d="M59 119h28v12H59Z" fill="#ffd46a"/>
+    <path d="M891 139h25c6 0 10 5 8 11l-2 7h-31Z" fill="#f6fbff"/>
+    <path d="M911 144h18" stroke="#bfe8ff" stroke-width="5" stroke-linecap="round"/>
+    <path d="M825 33h40l10 16h-61Z" fill="#e7eef6" stroke="#1d5f98" stroke-width="5"/>
+    <path d="M863 34h42l8 16h-40Z" fill="#e7eef6" stroke="#1d5f98" stroke-width="5"/>
+
+    <g opacity="0.5">
+      <path d="M64 42h75" stroke="#ff7d89" stroke-width="4" stroke-linecap="round"/>
+      <path d="M453 42h255" stroke="#39a5f3" stroke-width="4" stroke-linecap="round"/>
+      <path d="M62 216h785" stroke="#f4fbff" stroke-width="3" opacity="0.45"/>
+    </g>
+  </g>
+</svg>

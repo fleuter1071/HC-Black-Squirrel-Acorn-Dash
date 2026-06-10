@@ -16,6 +16,8 @@ const SKEETERS_SHIELD_SECONDS = 8;
 const SKEETERS_BOOST_SECONDS = 2;
 const CAPE_SECONDS = 7;
 const CAPE_SPEED_MULTIPLIER = 1.22;
+const BLUE_BUS_SPEED = 110;
+const BLUE_BUS_DWELL_SECONDS = 2.6;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -71,7 +73,8 @@ const hazardRoutes = [
   { type:"student", style:"books", color:"#e0a539", skin:"#c98e70", hair:"#a05d38", speed:74, radius:18, points:[[410,650],[680,705],[810,615],[550,535]], offset:3.4 },
   { type:"bike", style:"helmet", color:"#4779a2", frame:"#315f76", skin:"#d99b72", hair:"#52372b", speed:155, radius:20, points:[[140,405],[470,405],[780,450],[1030,665],[1420,640]], offset:1 },
   { type:"bike", style:"basket", color:"#6d4c91", frame:"#7c4c52", skin:"#7f563f", hair:"#25221e", speed:140, radius:20, points:[[1060,900],[1015,715],[950,535],[730,420]], offset:3 },
-  { type:"cart", style:"security", color:"#f2eddc", speed:105, radius:28, points:[[1440,640],[1200,640],[1010,714],[820,616],[490,670]], offset:2.3 }
+  { type:"cart", style:"security", color:"#f2eddc", speed:105, radius:28, points:[[1440,640],[1200,640],[1010,714],[820,616],[490,670]], offset:2.3 },
+  { type:"bus", style:"bluebus", speed:BLUE_BUS_SPEED, radius:78, w:250, h:68, stopAt:4, dwell:BLUE_BUS_DWELL_SECONDS, oneWay:true, points:[[1540,245],[1320,245],[1110,255],[930,270],[760,250],[620,230],[520,220]], offset:0 }
 ];
 
 let state;
@@ -229,7 +232,7 @@ function update(dt) {
   state.spills = state.spills.filter(acorn => !acorn.collected && acorn.life > 0);
   if (!state.player.invulnerable && state.activePowerups.scroll <= 0 && state.activePowerups.cape <= 0) {
     for (const hazard of state.hazards) {
-      if (distance(state.player, hazard) < state.player.r + hazard.radius) {
+      if (isHazardCollision(hazard)) {
         if (state.activePowerups.skeeters > 0) blockWithSkeetersPie(hazard);
         else bump(hazard);
         break;
@@ -248,11 +251,24 @@ function update(dt) {
 }
 
 function moveHazard(h, dt) {
+  if (h.dwellLeft > 0) {
+    h.dwellLeft = Math.max(0, h.dwellLeft - dt);
+    h.doorsOpen = true;
+    return;
+  }
+  h.doorsOpen = false;
   const from = h.points[h.segment], to = h.points[(h.segment + 1) % h.points.length];
   const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
   const scale=getDifficultyScale(h.type);
   h.progress += h.speed * scale * dt / len;
-  if (h.progress >= 1) { h.progress -= 1; h.segment = (h.segment + 1) % h.points.length; }
+  if (h.progress >= 1) {
+    h.progress -= 1;
+    h.segment = (h.segment + 1) % h.points.length;
+    if (h.oneWay && h.segment === h.points.length - 1) {
+      h.segment = 0; h.progress = 0; h.x = h.points[0][0]; h.y = h.points[0][1];
+    }
+    if (h.segment === h.stopAt) { h.progress = 0; h.dwellLeft = h.dwell; }
+  }
   const a = h.points[h.segment], b = h.points[(h.segment + 1) % h.points.length];
   h.x = a[0] + (b[0] - a[0]) * h.progress; h.y = a[1] + (b[1] - a[1]) * h.progress;
   h.angle = Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -264,6 +280,7 @@ function getAcornValue() {
 
 function getDifficultyScale(type) {
   const progress=1-state.timeLeft/GAME_SECONDS;
+  if(type==="bus")return 1;
   if(type==="student")return 1+progress*.08;
   if(type==="bike")return 1+progress*.28;
   return 1+progress*.38;
@@ -271,6 +288,16 @@ function getDifficultyScale(type) {
 
 function updateNearMiss(hazard) {
   if(hazard.type==="student")return;
+  if(hazard.type==="bus") {
+    const hit=busCollisionGap(hazard);
+    hazard.nearMissReady??=true;
+    if(hit<22&&hit>0&&hazard.nearMissReady){
+      hazard.nearMissReady=false;state.score++;state.dodges++;
+      addScorePop(state.player.x,state.player.y-22,"CAUGHT THE GAP! +1","#dff3ff",17);playSound("dodge");
+    }
+    if(hit>70)hazard.nearMissReady=true;
+    return;
+  }
   const gap=distance(state.player,hazard),threshold=state.player.r+hazard.radius+25;
   hazard.nearMissReady??=true;
   if(gap<threshold&&gap>state.player.r+hazard.radius&&hazard.nearMissReady){
@@ -280,6 +307,29 @@ function updateNearMiss(hazard) {
     addScorePop(state.player.x,state.player.y-22,flying?"SOARING! +1":hazard.type==="cart"?"CHUCK WAVES! +1":"NICE DODGE! +1",flying?"#ffe56b":hazard.type==="cart"?"#fff0a8":"#dfffa8",17);playSound("dodge");
   }
   if(gap>threshold+55)hazard.nearMissReady=true;
+}
+
+function isHazardCollision(hazard) {
+  if (hazard.type === "bus") return isBusCollision(hazard);
+  return distance(state.player, hazard) < state.player.r + hazard.radius;
+}
+
+function getBusLocalPosition(bus) {
+  const cos=Math.cos(-(bus.angle||0)),sin=Math.sin(-(bus.angle||0));
+  const dx=state.player.x-bus.x,dy=state.player.y-bus.y;
+  return { x:dx*cos-dy*sin, y:dx*sin+dy*cos };
+}
+
+function isBusCollision(bus) {
+  const local=getBusLocalPosition(bus),halfW=bus.w*.5,halfH=bus.h*.5;
+  return Math.abs(local.x)<halfW+state.player.r*.55 && Math.abs(local.y)<halfH+state.player.r*.7;
+}
+
+function busCollisionGap(bus) {
+  const local=getBusLocalPosition(bus),halfW=bus.w*.5,halfH=bus.h*.5;
+  const dx=Math.abs(local.x)-halfW-state.player.r*.55,dy=Math.abs(local.y)-halfH-state.player.r*.7;
+  if(dx<0&&dy<0)return -Math.min(-dx,-dy);
+  return Math.hypot(Math.max(dx,0),Math.max(dy,0));
 }
 
 function showDefaultNotebook() {
@@ -394,23 +444,25 @@ function collectSpill(acorn) {
 
 function bump(hazard) {
   state.player.invulnerable = 1.75;
-  state.player.spin = hazard.type === "cart" ? .95 : .55;
-  state.shake = reducedMotionQuery.matches ? 0 : hazard.type === "cart" ? .48 : .18;
+  state.player.spin = hazard.type === "cart" || hazard.type === "bus" ? .95 : .55;
+  state.shake = reducedMotionQuery.matches ? 0 : hazard.type === "cart" || hazard.type === "bus" ? .48 : .18;
   state.combo=0;state.comboWindow=0;
   const lost = state.score > 0 ? 1 : 0;
   state.score -= lost;
   if (lost) spillAcorn(hazard.type === "bike" ? 2 : 1);
   if(hazard.type==="cart")state.chuckCheckIns++;
-  const reaction = hazard.type === "cart"
+  const reaction = hazard.type === "bus"
+    ? { text:"BLUE BUS!", color:"#dff3ff", stars:true }
+    : hazard.type === "cart"
     ? { text:"CHUCK!", color:"#ffe56b", stars:true }
     : hazard.type === "bike"
       ? { text:"Bike lane!", color:"#fff5da", stars:false }
       : { text:"Sorry, SBS!", color:"#fff5da", stars:false };
   state.reactions.push({ x:state.player.x, y:state.player.y-28, life:1.05, ...reaction });
-  const label = hazard.type === "cart" ? "Chuck checked on SBS!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
+  const label = hazard.type === "bus" ? "Blue Bus at Stokes Bay!" : hazard.type === "cart" ? "Chuck checked on SBS!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
   showToast(`${label}${lost ? " Grab that runaway acorn!" : ""}`);
   spawnParticles(state.player.x, state.player.y, "#ffffff");
-  playSound(hazard.type==="cart" ? "wobble" : "bump");
+  playSound(hazard.type==="cart"||hazard.type==="bus" ? "wobble" : "bump");
 }
 
 function blockWithSkeetersPie(hazard) {
@@ -545,12 +597,14 @@ function drawCampus() {
   ctx.strokeStyle="rgba(75,112,66,.16)";ctx.lineWidth=2;
   for(let x=18;x<WORLD.width;x+=44){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x-90,WORLD.height);ctx.stroke();}
   ctx.fillStyle = "#b7d29a"; ctx.beginPath(); ctx.ellipse(900,640,470,270,-.18,0,Math.PI*2); ctx.fill();
+  drawBlueBusRoad();
   drawPond();
   paths.forEach(drawIllustratedPath);
   trees.forEach(([x,y,r,type]) => drawTree(x,y,r,type));
   landmarks.forEach(drawBuilding);
   drawCampusDetails();
   drawMapLabel(90,946,"DUCK POND",11);
+  drawMapLabel(760,220,"STOKES BAY",12);
   drawMapLabel(760,914,"FOUNDERS GREEN",15);
   drawEasterEggs();
   ctx.fillStyle="#486e4e"; ctx.font="900 15px Nunito"; ctx.fillText("HAVERFORD COLLEGE", 48, 62);
@@ -570,6 +624,30 @@ function drawIllustratedPath(path) {
     ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
     path.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();
   });
+}
+
+function drawBlueBusRoad() {
+  const road=[[1585,238],[1320,238],[1110,248],[930,263],[760,243],[620,223],[520,220]];
+  ctx.save();
+  ctx.lineCap="round";ctx.lineJoin="round";
+  [["rgba(23,44,53,.18)",58],["#7d8c8f",46],["#9ba8a7",34]].forEach(([color,width])=>{
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+    road.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();
+  });
+  ctx.strokeStyle="rgba(255,253,236,.7)";ctx.lineWidth=3;ctx.setLineDash([22,18]);ctx.beginPath();
+  road.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="rgba(255,253,246,.78)";roundRect(700,204,120,28,8);ctx.fill();
+  ctx.strokeStyle="rgba(23,60,45,.35)";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle="#173c2d";ctx.font="900 10px Nunito";ctx.textAlign="center";ctx.fillText("BLUE BUS STOP",760,222);ctx.textAlign="left";
+  drawBusStopSign(682,236);
+  ctx.restore();
+}
+
+function drawBusStopSign(x,y) {
+  ctx.save();ctx.translate(x,y);
+  ctx.strokeStyle="#2a4840";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,39);ctx.stroke();
+  ctx.fillStyle="#0b6db6";roundRect(-19,-22,38,25,5);ctx.fill();
+  ctx.fillStyle="#fffdf6";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("Bi-Co",0,-12);ctx.fillText("BUS",0,-3);ctx.restore();
 }
 
 function drawCompassRose(x,y) {
@@ -718,6 +796,18 @@ function drawCampusDetails() {
   [[740,690],[805,705],[870,690]].forEach(([x,y])=>drawLawnChair(x,y));
   [[488,390],[744,442],[1005,705],[1180,630],[1370,640]].forEach(([x,y])=>drawLamp(x,y));
   [[248,304],[1190,598],[1095,870]].forEach(([x,y])=>drawFlowerBed(x,y));
+  drawWaitingStudents();
+}
+
+function drawWaitingStudents() {
+  [[735,232,"#5d78a7"],[790,236,"#cf704d"],[815,246,"#e0a539"]].forEach(([x,y,color],i)=>{
+    ctx.save();ctx.translate(x,y);
+    ctx.fillStyle="rgba(24,37,31,.18)";ctx.beginPath();ctx.ellipse(0,19,11,5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=color;roundRect(-7,-5,14,19,5);ctx.fill();
+    ctx.fillStyle=i===1?"#8c5f45":"#efc3a1";ctx.beginPath();ctx.arc(0,-12,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#28342f";roundRect(7,-2,6,13,3);ctx.fill();
+    ctx.restore();
+  });
 }
 
 function drawLawnChair(x,y) {
@@ -925,8 +1015,12 @@ function drawCapePowerup() {
 }
 
 function drawHazard(h) {
+  if(h.type==="bus") {
+    drawBlueBus(h);
+    return;
+  }
   ctx.save(); ctx.translate(h.x,h.y); ctx.rotate(h.angle || 0);
-  ctx.fillStyle="rgba(31,47,39,.18)";ctx.beginPath();ctx.ellipse(2,h.type==="cart"?21:15,h.type==="cart"?34:21,h.type==="cart"?10:7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="rgba(31,47,39,.18)";ctx.beginPath();ctx.ellipse(2,h.type==="bus"?34:h.type==="cart"?21:15,h.type==="bus"?140:h.type==="cart"?34:21,h.type==="bus"?18:h.type==="cart"?10:7,0,0,Math.PI*2);ctx.fill();
   if(h.type==="student") {
     drawStudentHazard(h);
   } else if(h.type==="bike") {
@@ -935,6 +1029,58 @@ function drawHazard(h) {
     drawCartHazard(h);
   }
   ctx.restore();
+}
+
+function drawBlueBus(h) {
+  const facingLeft=Math.cos(h.angle||0)<0;
+  ctx.save();
+  ctx.translate(h.x,h.y);
+  ctx.rotate(facingLeft ? (h.angle||0)-Math.PI : (h.angle||0));
+  ctx.fillStyle="rgba(31,47,39,.18)";ctx.beginPath();ctx.ellipse(2,34,140,18,0,0,Math.PI*2);ctx.fill();
+  drawBlueBusHazard(h,facingLeft);
+  ctx.restore();
+}
+
+function drawBlueBusHazard(h,facingLeft=false) {
+  const w=h.w,hgt=h.h,doorOpen=h.doorsOpen;
+  const redX=facingLeft?w/2-87:-w/2+5,blueX=facingLeft?-w/2+5:-w/2+86,blueW=w-92;
+  const doorX=facingLeft?-w/2+10:w/2-38,doorLightX=facingLeft?-w/2+34:w/2-50;
+  const haverfordX=facingLeft?84:-84,brynMawrX=facingLeft?-53:53;
+  ctx.save();
+  ctx.translate(0,-8);
+  ctx.fillStyle="rgba(6,18,31,.35)";roundRect(-w/2+4,-hgt/2+12,w,58,12);ctx.fill();
+  ctx.fillStyle="#071827";roundRect(-w/2,-hgt/2,w,hgt,13);ctx.fill();
+  ctx.fillStyle="#c51f33";roundRect(redX,-hgt/2+5,82,hgt-10,8);ctx.fill();
+  ctx.fillStyle="#0067b8";roundRect(blueX,-hgt/2+5,blueW,hgt-10,8);ctx.fill();
+  ctx.fillStyle="#edf2f5";ctx.beginPath();ctx.moveTo(-43,-hgt/2+5);ctx.lineTo(32,hgt/2-5);ctx.lineTo(11,hgt/2-5);ctx.lineTo(-65,-hgt/2+5);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#0d74bd";ctx.beginPath();ctx.moveTo(-12,-hgt/2+5);ctx.lineTo(63,hgt/2-5);ctx.lineTo(50,hgt/2-5);ctx.lineTo(-26,-hgt/2+5);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#f6f8fa";ctx.beginPath();ctx.moveTo(14,-hgt/2+5);ctx.lineTo(89,hgt/2-5);ctx.lineTo(79,hgt/2-5);ctx.lineTo(3,-hgt/2+5);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#09253d";roundRect(-w/2+12,-hgt/2+9,w-34,25,5);ctx.fill();
+  for(let x=-91;x<=74;x+=38){ctx.fillStyle="#12334d";roundRect(x,-hgt/2+13,27,18,3);ctx.fill();ctx.fillStyle="rgba(83,192,255,.45)";ctx.fillRect(x+4,-hgt/2+16,15,3);}
+  ctx.fillStyle="#06121f";roundRect(doorX,-hgt/2+10,28,51,5);ctx.fill();
+  if(doorOpen){
+    ctx.fillStyle="#dff3ff";roundRect(doorLightX,-hgt/2+18,16,40,4);ctx.fill();
+    ctx.fillStyle="rgba(223,243,255,.22)";ctx.beginPath();ctx.ellipse(doorLightX+4,30,35,11,0,0,Math.PI*2);ctx.fill();
+  } else {
+    ctx.strokeStyle="#5fc0ff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(doorX+7,-hgt/2+17);ctx.lineTo(doorX+7,hgt/2-9);ctx.stroke();
+  }
+  ctx.fillStyle="#fff9ee";ctx.font="900 18px Georgia";ctx.textAlign="center";ctx.fillText("HAVERFORD",haverfordX,10);
+  ctx.font="900 12px Georgia";ctx.fillText("COLLEGE",haverfordX,25);
+  ctx.font="900 18px Georgia";ctx.fillText("BRYN MAWR",brynMawrX,8);
+  ctx.font="900 10px Georgia";ctx.fillText("COLLEGE",brynMawrX,23);ctx.textAlign="left";
+  drawBusWheel(-75,31);drawBusWheel(88,31);
+  ctx.fillStyle="#ffd46a";ctx.fillRect(facingLeft?w/2-18:-w/2+7,4,11,7);
+  ctx.fillStyle="#f6fbff";ctx.fillRect(facingLeft?-w/2+3:w/2-9,5,11,8);
+  if(doorOpen){
+    ctx.fillStyle="#173c2d";ctx.font="900 10px Nunito";ctx.textAlign="center";ctx.fillText("STOKES BAY",0,-47);ctx.textAlign="left";
+  }
+  ctx.restore();
+}
+
+function drawBusWheel(x,y) {
+  ctx.fillStyle="#050608";ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#20262c";ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#59616a";ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
 }
 
 function drawStudentHazard(h) {
