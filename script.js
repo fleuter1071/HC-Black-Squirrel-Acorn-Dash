@@ -39,7 +39,7 @@ const paths = [
 const trees = [
   [95,118,42],[170,215,34,"dogwood"],[1380,142,45],[1480,240,36],[85,780,42],[185,880,38],[340,850,45],
   [525,530,30],[620,720,38],[760,795,33],[1460,840,46,"sycamore"],[1310,930,36],[1060,190,39],[1180,135,31],
-  [870,165,26,"tulip"],[560,315,28],[345,545,33],[1520,520,31],[40,510,36,"maple"],[950,890,28],[118,630,27]
+  [870,165,26,"maple"],[560,315,28],[345,545,33],[1520,520,31],[40,510,36,"maple"],[950,890,28],[118,630,27]
 ];
 
 const trailChapters = [
@@ -92,7 +92,7 @@ let orientationGateEnabled = false;
 function newState() {
   return {
     running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
-    player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, secretDance: 0, moving:false },
+    player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, secretDance: 0, moving:false, skeetersHero:{ scale:1, lift:0, rotate:-.12, glow:0 }, capeLaunch:{ burst:0, lift:0, capeScale:1, streak:0 } },
     camera: { x:690, y:560 },
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
@@ -198,6 +198,12 @@ function update(dt) {
   state.player.invulnerable = Math.max(0, state.player.invulnerable - dt);
   state.player.spin = Math.max(0, state.player.spin - dt);
   state.player.secretDance = Math.max(0, state.player.secretDance - dt);
+  if (state.player.capeLaunch && (!window.gsap || reducedMotionQuery.matches)) {
+    state.player.capeLaunch.burst=Math.max(0,state.player.capeLaunch.burst-dt*1.8);
+    state.player.capeLaunch.streak=Math.max(0,state.player.capeLaunch.streak-dt*1.8);
+    state.player.capeLaunch.lift=Math.max(0,state.player.capeLaunch.lift-dt*90);
+    state.player.capeLaunch.capeScale=1+Math.max(0,state.player.capeLaunch.capeScale-1-dt*1.2);
+  }
   Object.keys(state.activePowerups).forEach(id => state.activePowerups[id] = Math.max(0, state.activePowerups[id] - dt));
   updateSecretRevealAnimations();
 
@@ -406,11 +412,11 @@ function collectPowerup() {
   if (type.id === "skeeters") {
     state.activePowerups.skeetersBoost = SKEETERS_BOOST_SECONDS;
     state.skeetersDeliveries++;
+    triggerSkeetersHeroMoment();
   }
   if (type.id === "cape") {
     state.capeFlights++;
-    spawnCapeSparkles(x, y);
-    state.reactions.push({ x:state.player.x, y:state.player.y-36, life:1.15, text:"UP, SBS!", color:"#fff1bd", stars:true });
+    triggerCapeComicLaunch();
   }
   state.powerup = null;
   state.nextPowerupAt = state.elapsed + POWERUP_INTERVAL;
@@ -418,6 +424,48 @@ function collectPowerup() {
   addScorePop(x, y, type.popName || type.name.toUpperCase(), "#f7f2bf");
   showToast(type.note);
   playSound(type.id === "cape" ? "cape" : "powerup");
+}
+
+function triggerCapeComicLaunch() {
+  const launch = state.player.capeLaunch;
+  launch.burst = 1;
+  launch.lift = 30;
+  launch.capeScale = 1.35;
+  launch.streak = 1;
+  spawnCapeSparkles(state.player.x, state.player.y, 32, 1.35);
+  addScorePop(state.player.x, state.player.y - 50, "WHOOSH!", "#ffe56b", 24);
+  state.reactions.push({ x:state.player.x, y:state.player.y-42, life:1.2, text:"SUPER SBS!", color:"#fff1bd", stars:true });
+  if (window.gsap && !reducedMotionQuery.matches) {
+    gsap.killTweensOf(launch);
+    gsap.to(launch, { lift:0, capeScale:1, duration:.58, ease:"back.out(2.4)" });
+    gsap.to(launch, { burst:0, streak:0, duration:.72, ease:"power2.out" });
+  } else {
+    launch.burst = .35;
+    launch.lift = 0;
+    launch.capeScale = 1;
+    launch.streak = .25;
+  }
+}
+
+function triggerSkeetersHeroMoment() {
+  const hero = state.player.skeetersHero;
+  hero.scale = .28;
+  hero.lift = 22;
+  hero.rotate = -.7;
+  hero.glow = 0;
+  spawnPizzaCrumbs(state.player.x + 20, state.player.y - 8, 24, 1.28);
+  addScorePop(state.player.x, state.player.y - 42, "PIZZA BOX HERO!", "#fff0a8", 20);
+  state.reactions.push({ x:state.player.x, y:state.player.y-46, life:1.15, text:"SKEETER'S!", color:"#fff1bd", stars:true });
+  if (window.gsap && !reducedMotionQuery.matches) {
+    gsap.killTweensOf(hero);
+    gsap.to(hero, { scale:1, lift:0, rotate:-.12, duration:.52, ease:"back.out(2.6)" });
+    gsap.to(hero, { glow:1, duration:.22, ease:"sine.out", yoyo:true, repeat:2 });
+  } else {
+    hero.scale = 1;
+    hero.lift = 0;
+    hero.rotate = -.12;
+    hero.glow = .35;
+  }
 }
 
 function choosePowerupType() {
@@ -822,7 +870,6 @@ function drawJapaneseMapleCluster(x,y,size,color,phase=0) {
 }
 
 function drawCampusDetails() {
-  [[740,690],[805,705],[870,690]].forEach(([x,y])=>drawLawnChair(x,y));
   [[488,390],[744,442],[1005,705],[1180,630],[1370,640]].forEach(([x,y])=>drawLamp(x,y));
   [[248,304],[1190,598],[1095,870]].forEach(([x,y])=>drawFlowerBed(x,y));
   drawWaitingStudents();
@@ -1198,12 +1245,14 @@ function drawPlayer() {
   if(p.secretDance>0)ctx.rotate(Math.sin((.55-p.secretDance)*30)*.32);
   ctx.rotate(p.spin ? (1-p.spin) * 18 : 0);ctx.scale(p.facing,1);
   const flying=state.activePowerups.cape>0;
-  const stride=Math.sin(p.bob),hop=p.moving?Math.abs(stride)*4:Math.sin(state.elapsed*2)*1.5,flightLift=flying?14+Math.sin(state.elapsed*6)*3:0;
+  const launch=p.capeLaunch || { burst:0, lift:0, capeScale:1, streak:0 };
+  const stride=Math.sin(p.bob),hop=p.moving?Math.abs(stride)*4:Math.sin(state.elapsed*2)*1.5,flightLift=flying?14+Math.sin(state.elapsed*6)*3+launch.lift:0;
+  if(flying&&launch.burst>0)drawCapeLaunchBurst(launch);
   ctx.fillStyle=flying?"rgba(20,38,30,.14)":"rgba(20,38,30,.22)";
   ctx.beginPath();ctx.ellipse(0,flying?30:23,flying?18:27,flying?6:10,0,0,Math.PI*2);ctx.fill();
   ctx.translate(0,-hop-flightLift);
   if(p.secretDance>0)ctx.translate(0,-Math.sin((.55-p.secretDance)*Math.PI/.55)*8);
-  if(flying)drawSuperCape(stride);
+  if(flying)drawSuperCape(stride,launch.capeScale);
   const tailSwing=Math.sin(state.elapsed*(p.moving?10:3))*.24;
   ctx.fillStyle="#101b18";ctx.beginPath();ctx.ellipse(-29,-5,33,25,-.78+tailSwing,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#1f2c28";ctx.beginPath();ctx.ellipse(-35,-13,21,17,-.78+tailSwing,0,Math.PI*2);ctx.fill();
@@ -1229,13 +1278,33 @@ function drawPlayer() {
   if(state.activePowerups.soup>0){ctx.strokeStyle="rgba(212,208,125,.72)";ctx.lineWidth=4;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-44-i*13,-10+i*10);ctx.lineTo(-62-i*13,-10+i*10);ctx.stroke();}}
   if(state.activePowerups.scroll>0){ctx.save();ctx.strokeStyle="#fff0a0";ctx.lineWidth=4;ctx.globalAlpha=.7+.2*Math.sin(state.elapsed*8);ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.stroke();ctx.restore();}
   if(state.activePowerups.skeeters>0)drawSkeetersBoxShield();
-  if(flying)drawCapeFlightTrail();
+  if(flying)drawCapeFlightTrail(launch.streak);
   ctx.restore();
 }
 
-function drawSuperCape(stride) {
-  const flutter=Math.sin(state.elapsed*9)*4+stride*2;
+function drawCapeLaunchBurst(launch) {
+  const b=launch.burst;
   ctx.save();
+  ctx.globalAlpha=.18+.38*b;
+  ctx.fillStyle="#ffe56b";
+  ctx.strokeStyle="#8b0000";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI/8;
+    const r=i%2?46+26*b:20+10*b;
+    const x=Math.cos(a)*r,y=Math.sin(a)*r;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.globalAlpha=.5*b;ctx.strokeStyle="#fff1bd";ctx.lineWidth=4;
+  for(let i=0;i<6;i++){const a=-Math.PI*.92+i*.34;ctx.beginPath();ctx.moveTo(Math.cos(a)*34,Math.sin(a)*22+22);ctx.lineTo(Math.cos(a)*(72+18*b),Math.sin(a)*(44+14*b)+36);ctx.stroke();}
+  ctx.restore();
+}
+
+function drawSuperCape(stride,capeScale=1) {
+  const flutter=Math.sin(state.elapsed*9)*4+stride*2;
+  ctx.save();ctx.scale(capeScale,capeScale);
   ctx.fillStyle="#8b0000";ctx.strokeStyle="#4d0000";ctx.lineWidth=3;
   ctx.beginPath();
   ctx.moveTo(-4,-8);ctx.bezierCurveTo(-23,-20,-49,-16,-55,1+flutter);
@@ -1246,23 +1315,31 @@ function drawSuperCape(stride) {
   ctx.restore();
 }
 
-function drawCapeFlightTrail() {
+function drawCapeFlightTrail(streak=0) {
   ctx.save();
-  ctx.strokeStyle="rgba(255,229,107,.76)";ctx.lineWidth=3;ctx.lineCap="round";
-  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-42-i*13,-15+i*10);ctx.lineTo(-60-i*13,-15+i*10);ctx.stroke();}
-  ctx.fillStyle="#ffe56b";for(let i=0;i<3;i++){const a=state.elapsed*4+i*2.1;ctx.beginPath();ctx.arc(-39+Math.cos(a)*12,-20+Math.sin(a)*18,2,0,Math.PI*2);ctx.fill();}
+  ctx.strokeStyle="rgba(255,229,107,.76)";ctx.lineWidth=3+streak*2;ctx.lineCap="round";
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-42-i*13,-15+i*10);ctx.lineTo(-60-i*13-streak*28,-15+i*10);ctx.stroke();}
+  if(streak>0){ctx.strokeStyle="rgba(139,0,0,.58)";ctx.lineWidth=2;for(let i=0;i<2;i++){ctx.beginPath();ctx.moveTo(-45-i*16,-5+i*18);ctx.lineTo(-83-i*20-streak*22,-5+i*18);ctx.stroke();}}
+  ctx.fillStyle="#ffe56b";for(let i=0;i<3;i++){const a=state.elapsed*4+i*2.1;ctx.beginPath();ctx.arc(-39+Math.cos(a)*12-streak*10,-20+Math.sin(a)*18,2+streak,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
 
 function drawSkeetersBoxShield() {
   const pulse=.85+.15*Math.sin(state.elapsed*8);
-  ctx.save();ctx.globalAlpha=pulse;ctx.translate(26,-8);ctx.rotate(-.12);
+  const hero=state.player.skeetersHero || { scale:1, lift:0, rotate:-.12, glow:0 };
+  ctx.save();
+  ctx.globalAlpha=Math.min(1,pulse+.18*hero.glow);
+  ctx.translate(26,-8-hero.lift);
+  ctx.rotate(hero.rotate);
+  ctx.scale(hero.scale,hero.scale);
+  if(hero.glow>0){ctx.shadowColor="#ffca73";ctx.shadowBlur=18*hero.glow;}
   ctx.fillStyle="#fff0c2";roundRect(-6,-19,38,29,4);ctx.fill();
+  ctx.shadowBlur=0;
   ctx.strokeStyle="#a7502a";ctx.lineWidth=3;ctx.stroke();
   ctx.fillStyle="#d77737";roundRect(-1,-14,26,6,3);ctx.fill();
   ctx.fillStyle="#713a21";ctx.font="900 6px Nunito";ctx.textAlign="center";ctx.fillText("SKEETER'S",13,2);
   ctx.restore();
-  ctx.save();ctx.globalAlpha=.36+.16*Math.sin(state.elapsed*7);ctx.strokeStyle="#ffca73";ctx.lineWidth=4;ctx.beginPath();ctx.arc(2,0,33,0,Math.PI*2);ctx.stroke();ctx.restore();
+  ctx.save();ctx.globalAlpha=.36+.16*Math.sin(state.elapsed*7)+.24*hero.glow;ctx.strokeStyle="#ffca73";ctx.lineWidth=4+hero.glow*3;ctx.beginPath();ctx.arc(2,0,33+hero.glow*9,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 
 function addScorePop(x,y,text,color,size=19) {
@@ -1491,16 +1568,16 @@ function drawMiniTray(x,y) {
   ctx.restore();
 }
 
-function spawnPizzaCrumbs(x,y) {
-  for(let i=0;i<12;i++){
-    const a=Math.PI*2*i/12, speed=55+(i%4)*18;
+function spawnPizzaCrumbs(x,y,count=12,force=1) {
+  for(let i=0;i<count;i++){
+    const a=Math.PI*2*i/count, speed=(55+(i%4)*18)*force;
     state.particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.7,color:i%3?"#ffd271":"#fff1bd"});
   }
 }
 
-function spawnCapeSparkles(x,y) {
-  for(let i=0;i<18;i++){
-    const a=Math.PI*2*i/18, speed=70+(i%5)*18;
+function spawnCapeSparkles(x,y,count=18,force=1) {
+  for(let i=0;i<count;i++){
+    const a=Math.PI*2*i/count, speed=(70+(i%5)*18)*force;
     state.particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.9,color:i%3?"#ffe56b":"#8b0000"});
   }
 }
