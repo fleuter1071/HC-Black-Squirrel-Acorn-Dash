@@ -83,6 +83,7 @@ let lastTime = 0;
 let toastTimer;
 let storyTimer;
 let countdownTimer;
+let professorBoltzSprite;
 const keys = new Set();
 const joystick = { x:0, y:0, pointerId:null };
 let portraitBypass = false;
@@ -99,7 +100,8 @@ function newState() {
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null, powerupBag: [],
     activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
-    ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}]
+    ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}],
+    professorBoltz: { x:292, y:862, segment:0, progress:0, speed:24, dwellLeft:1.8, facing:-1, wave:0, route:[[292,862],[246,840],[192,826],[134,846],[103,884],[128,930],[204,948],[270,916],[292,862]] }
   };
 }
 
@@ -197,6 +199,7 @@ function update(dt) {
   state.player.spin = Math.max(0, state.player.spin - dt);
   state.player.secretDance = Math.max(0, state.player.secretDance - dt);
   Object.keys(state.activePowerups).forEach(id => state.activePowerups[id] = Math.max(0, state.activePowerups[id] - dt));
+  updateSecretRevealAnimations();
 
   if (!hasSpecialEvent() && state.elapsed >= state.nextGoldenAt) spawnGoldenAcorn();
   if (state.golden) {
@@ -353,6 +356,26 @@ function updateTrailChapter() {
   showDefaultNotebook();
 }
 
+function updateSecretRevealAnimations() {
+  state.hidden.forEach(secret=>{
+    if(secret.collected||secret.revealAnimated)return;
+    const visible=distance(state.player,secret)<145||state.activePowerups.leaf>0;
+    if(!visible)return;
+    secret.revealAnimated=true;
+    secret.revealScale=.68;
+    secret.revealGlow=0;
+    secret.revealLift=10;
+    if(window.gsap&&!reducedMotionQuery.matches){
+      gsap.to(secret,{revealScale:1,duration:.52,ease:"back.out(2.2)"});
+      gsap.to(secret,{revealLift:0,duration:.52,ease:"sine.out"});
+      gsap.to(secret,{revealGlow:1,duration:.28,ease:"sine.out",yoyo:true,repeat:1});
+    } else {
+      secret.revealScale=1;
+      secret.revealLift=0;
+    }
+  });
+}
+
 function collectAcorn(acorn) {
   const points=getAcornValue();acorn.collected = true; state.score+=points;
   spawnParticles(acorn.x, acorn.y, "#f4c65f");
@@ -415,7 +438,13 @@ function makePowerupBag() {
 function spawnGoldenAcorn() {
   const available = goldenSpots.filter(([x,y]) => distance(state.player, {x,y}) > 230);
   const [x,y] = available[Math.floor(Math.random() * available.length)];
-  state.golden = { x, y, life:GOLDEN_ACORN_LIFETIME };
+  state.golden = { x, y, life:GOLDEN_ACORN_LIFETIME, introScale:.25, introGlow:0 };
+  if(window.gsap&&!reducedMotionQuery.matches){
+    gsap.to(state.golden,{introScale:1,duration:.58,ease:"back.out(2.6)"});
+    gsap.to(state.golden,{introGlow:1,duration:.24,ease:"sine.out",yoyo:true,repeat:1});
+  } else {
+    state.golden.introScale=1;
+  }
   showToast("Golden acorn spotted! Follow the pointer!");
   playTone(660, .08, "triangle"); playTone(880, .12, "triangle", .1);
 }
@@ -846,29 +875,37 @@ function drawSpilledAcorn(a) {
 
 function drawGoldenAcorn(a) {
   const pulse = 1 + Math.sin(state.elapsed * 7) * .12;
-  ctx.save();ctx.translate(a.x,a.y);ctx.scale(pulse,pulse);ctx.rotate(-.35);
-  ctx.shadowColor="#fff08a";ctx.shadowBlur=28;ctx.fillStyle="#f4c94f";ctx.beginPath();ctx.ellipse(0,6,17,23,0,0,Math.PI*2);ctx.fill();
+  const introScale=a.introScale??1,introGlow=a.introGlow??0;
+  ctx.save();ctx.translate(a.x,a.y);ctx.scale(pulse*introScale,pulse*introScale);ctx.rotate(-.35);
+  ctx.shadowColor="#fff08a";ctx.shadowBlur=28+introGlow*36;ctx.fillStyle="#f4c94f";ctx.beginPath();ctx.ellipse(0,6,17,23,0,0,Math.PI*2);ctx.fill();
   ctx.shadowBlur=0;ctx.fillStyle="#a96d21";ctx.fillRect(-17,-7,34,10);ctx.fillRect(4,-20,5,14);
   ctx.fillStyle="#fff5a9";ctx.beginPath();ctx.ellipse(-6,1,4,8,-.35,0,Math.PI*2);ctx.fill();ctx.restore();
+  if(introGlow>0){
+    ctx.save();ctx.globalAlpha=introGlow*.5;ctx.strokeStyle="#fff3a5";ctx.lineWidth=4;ctx.beginPath();ctx.arc(a.x,a.y,30+introGlow*24,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
 }
 
 function drawHiddenAcorn(a) {
   if(a.collected) return;
   const near=distance(state.player,a)<145;
   const revealed=state.activePowerups.leaf>0;
+  const revealGlow=a.revealGlow??0,revealLift=a.revealLift??0;
   const alpha=revealed ? .95 : near ? .72+.16*Math.sin(state.elapsed*5) : .32+.1*Math.sin(state.elapsed*3);
   ctx.save();ctx.globalAlpha=alpha;
-  drawSecretSparkles(a.x,a.y,near||revealed);
+  drawSecretSparkles(a.x,a.y,near||revealed,revealGlow);
   if(near||revealed)drawSecretObject(a);
+  if(revealGlow>0){
+    ctx.save();ctx.globalAlpha=revealGlow*.45;ctx.strokeStyle="#fff3a5";ctx.lineWidth=4;ctx.beginPath();ctx.arc(a.x,a.y-revealLift,34+revealGlow*18,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
   if(near){
     ctx.fillStyle="#fff8c7";ctx.strokeStyle="rgba(38,60,43,.65)";ctx.lineWidth=3;ctx.font="900 12px Nunito";ctx.textAlign="center";
-    ctx.strokeText(a.label.toUpperCase(),a.x,a.y-34);ctx.fillText(a.label.toUpperCase(),a.x,a.y-34);
+    ctx.strokeText(a.label.toUpperCase(),a.x,a.y-34-revealLift);ctx.fillText(a.label.toUpperCase(),a.x,a.y-34-revealLift);
   }
   ctx.restore();
 }
 
-function drawSecretSparkles(x,y,strong=false) {
-  const count=strong?7:4, radius=strong?28:18;
+function drawSecretSparkles(x,y,strong=false,boost=0) {
+  const count=strong?7:4, radius=(strong?28:18)+boost*10;
   ctx.fillStyle=strong?"#fff0a0":"#fff5bd";
   for(let i=0;i<count;i++){
     const angle=state.elapsed*1.8+i*Math.PI*2/count, twinkle=.65+.35*Math.sin(state.elapsed*5+i);
@@ -880,7 +917,8 @@ function drawSecretSparkles(x,y,strong=false) {
 }
 
 function drawSecretObject(a) {
-  ctx.save();ctx.translate(a.x,a.y+Math.sin(state.elapsed*4)*2);
+  const scale=a.revealScale??1,lift=a.revealLift??0;
+  ctx.save();ctx.translate(a.x,a.y+Math.sin(state.elapsed*4)*2-lift);ctx.scale(scale,scale);
   ctx.fillStyle="rgba(30,48,34,.2)";ctx.beginPath();ctx.ellipse(0,17,22,7,0,0,Math.PI*2);ctx.fill();
   if(a.object==="tray")drawSecretTray();
   else if(a.object==="key")drawSecretKey();
@@ -1273,6 +1311,7 @@ function updateAtmosphere(dt) {
     duck.x+=duck.speed*dt;
     if(duck.x>255)duck.x=92;
   });
+  updateProfessorBoltz(dt);
 }
 
 function drawAtmosphere() {
@@ -1286,7 +1325,30 @@ function drawAtmosphere() {
   ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=3;
   for(let i=0;i<3;i++){const ripple=(state.elapsed*18+i*28)%78;ctx.beginPath();ctx.ellipse(170,900,ripple*1.7,ripple*.8,-.18,0,Math.PI*2);ctx.stroke();}
   state.ducks.forEach(drawDuck);
+  drawProfessorBoltz();
   ctx.restore();
+}
+
+function updateProfessorBoltz(dt) {
+  const prof=state.professorBoltz;
+  if(prof.dwellLeft>0){
+    prof.dwellLeft=Math.max(0,prof.dwellLeft-dt);
+    prof.wave=Math.max(prof.wave,prof.dwellLeft);
+    return;
+  }
+  const from=prof.route[prof.segment],to=prof.route[(prof.segment+1)%prof.route.length];
+  const len=Math.hypot(to[0]-from[0],to[1]-from[1]);
+  prof.progress+=prof.speed*dt/len;
+  if(prof.progress>=1){
+    prof.progress=0;
+    prof.segment=(prof.segment+1)%prof.route.length;
+    if(prof.segment===2||prof.segment===5)prof.dwellLeft=1.9;
+  }
+  const a=prof.route[prof.segment],b=prof.route[(prof.segment+1)%prof.route.length];
+  prof.x=a[0]+(b[0]-a[0])*prof.progress;
+  prof.y=a[1]+(b[1]-a[1])*prof.progress;
+  if(Math.abs(b[0]-a[0])>.1)prof.facing=Math.sign(b[0]-a[0]);
+  prof.wave=Math.max(0,prof.wave-dt);
 }
 
 function drawDuck(duck) {
@@ -1297,6 +1359,45 @@ function drawDuck(duck) {
   ctx.fillStyle="#3d6a52";ctx.beginPath();ctx.arc(duck.x+10,y-7,6,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#e8a143";ctx.beginPath();ctx.moveTo(duck.x+15,y-7);ctx.lineTo(duck.x+23,y-4);ctx.lineTo(duck.x+15,y-2);ctx.fill();
   ctx.fillStyle="#17221f";ctx.beginPath();ctx.arc(duck.x+12,y-9,1.3,0,Math.PI*2);ctx.fill();
+}
+
+function drawProfessorBoltz() {
+  const prof=state.professorBoltz;
+  const bob=Math.sin(state.elapsed*4+prof.segment)*1.8;
+  ctx.save();
+  ctx.translate(prof.x,prof.y+bob);
+  ctx.scale(prof.facing,1);
+  ctx.fillStyle="rgba(20,35,30,.2)";ctx.beginPath();ctx.ellipse(0,28,22,7,0,0,Math.PI*2);ctx.fill();
+  if(professorBoltzSprite?.complete&&professorBoltzSprite.naturalWidth){
+    const stroll=prof.dwellLeft>0?0:Math.sin(state.elapsed*7)*2.2;
+    ctx.rotate(stroll*.012);
+    ctx.drawImage(professorBoltzSprite,-25,-58,50,72);
+  } else {
+    drawProfessorBoltzFallback(prof);
+  }
+  if(prof.dwellLeft>0){
+    ctx.scale(prof.facing,1);
+    ctx.fillStyle="rgba(255,253,246,.92)";roundRect(14,-68,68,23,10);ctx.fill();
+    ctx.strokeStyle="rgba(38,60,43,.35)";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="#315440";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("nice ducks",48,-53);
+  }
+  ctx.restore();
+}
+
+function drawProfessorBoltzFallback(prof) {
+  const stroll=prof.dwellLeft>0?0:Math.sin(state.elapsed*7)*2.5;
+  const wave=prof.wave>0?Math.sin(state.elapsed*9)*.65:0;
+  ctx.strokeStyle="#141716";ctx.lineWidth=6;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-7,12);ctx.lineTo(-13,25+stroll);ctx.moveTo(8,12);ctx.lineTo(14,25-stroll);ctx.stroke();
+  ctx.fillStyle="#111312";roundRect(-15,-7,30,28,8);ctx.fill();
+  ctx.fillStyle="#4a5969";ctx.beginPath();ctx.moveTo(-18,-8);ctx.lineTo(0,22);ctx.lineTo(18,-8);ctx.lineTo(12,21);ctx.lineTo(-12,21);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="#f0bf9e";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(-23,11);ctx.moveTo(13,0);ctx.lineTo(23,10-wave*9);ctx.stroke();
+  ctx.fillStyle="#f0bf9e";ctx.beginPath();ctx.arc(0,-23,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#6a3d2a";ctx.beginPath();ctx.ellipse(-9,-18,12,25,-.45,0,Math.PI*2);ctx.ellipse(7,-19,16,28,.35,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f0bf9e";ctx.beginPath();ctx.arc(0,-22,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#23465a";ctx.beginPath();ctx.arc(-3,-24,1.3,0,Math.PI*2);ctx.arc(4,-24,1.3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#8f5349";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(1,-18,4,.15,Math.PI-.15);ctx.stroke();
+  ctx.fillStyle="#f3ead2";roundRect(-22,10,20,14,3);ctx.fill();ctx.strokeStyle="#6e533b";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#30443b";ctx.font="900 6px Nunito";ctx.textAlign="center";ctx.fillText("PSY",-12,20);
 }
 
 function drawEasterEggs() {
@@ -1499,6 +1600,25 @@ function playSound(name){
 }
 function frame(t){const dt=Math.min((t-lastTime)/1000,.05)||0;lastTime=t;update(dt);draw();requestAnimationFrame(frame);}
 
+function initStartButtonBounce() {
+  const button=document.getElementById("startButton");
+  if(!button||!window.gsap||reducedMotionQuery.matches)return;
+  gsap.to(button,{
+    y:-5,
+    scale:1.035,
+    duration:.72,
+    ease:"sine.inOut",
+    repeat:-1,
+    yoyo:true,
+    repeatDelay:1.15
+  });
+}
+
+function loadSpriteAssets() {
+  professorBoltzSprite=new Image();
+  professorBoltzSprite.src="assets/marilyn-boltz-professor-sprite.svg";
+}
+
 window.addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 const joystickEl=document.getElementById("joystick");
@@ -1515,7 +1635,7 @@ document.getElementById("helpButton").addEventListener("click",()=>{
   const help=document.getElementById("mobileHelp"),show=!help.classList.contains("show");
   help.classList.toggle("show",show);document.getElementById("helpButton").setAttribute("aria-expanded",show);
 });
-document.getElementById("startButton").addEventListener("click",async()=>{if(isMobileView())await requestMobileFullscreen(true);startGame();});
+document.getElementById("startButton").addEventListener("click",async()=>{if(window.gsap)gsap.killTweensOf("#startButton");if(isMobileView())await requestMobileFullscreen(true);startGame();});
 document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
 function getShareText(){return `Can you beat my SBS reunion score? I earned the ${getRank()} title with ${state.score} points and ${state.secrets}/5 campus secrets in SBS: Acorn Dash. My best moment: ${getBestMoment()} ${location.href}`;}
@@ -1529,4 +1649,4 @@ refreshFullscreenButton();
 window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
 document.addEventListener("fullscreenchange",()=>{refreshFullscreenButton();resizeCanvasForViewport();});
 screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
-state=newState();updateHud();requestAnimationFrame(frame);
+loadSpriteAssets();state=newState();updateHud();initStartButtonBounce();requestAnimationFrame(frame);

@@ -2,6 +2,39 @@
 
 Session notes will be appended here as the game evolves.
 
+## 2026-06-09 - Blue Bus production push
+
+- Date/time
+  - 2026-06-09, America/New_York.
+- Feature name, work name, description, and value provided
+  - Pushed the Bi-Co Blue Bus route work to production on `main`.
+  - Production commit: `3d2fff7` (`Add Bi-Co Blue Bus route`).
+  - Delivered the Blue Bus as a visible Stokes Bay shuttle moment with route, stop, waiting students, custom canvas rendering, bus-specific collision, and near-miss reward.
+- Files changed
+  - `PROJECT_MEMORY.md`
+  - Previously shipped in commit `3d2fff7`:
+    - `script.js`
+    - `BLUE_BUS_MODULE_NOTES.md`
+    - `assets/blue-bus-sprite.svg`
+- Technical Architecture changes or key technical decisions made
+  - No new gameplay code changes in this memory append.
+  - Confirmed the Blue Bus production work was committed and pushed directly to `origin/main`.
+  - Kept the production record separate from the implementation notes so future sessions can distinguish build history from deployment history.
+- Assumptions
+  - `main` is the production branch for this static game.
+  - The pushed GitHub branch is the source used by the production host.
+- Known limitations
+  - Browser visual QA was still blocked by the local Windows sandbox startup issue during the implementation session.
+  - Production should be manually checked in a browser to confirm the Blue Bus appears and feels fair in live play.
+- Key learnings that you can bring with you to future sessions
+  - Memory should record both implementation and shipping milestones when the user asks to push production.
+  - For this repo, a clean `main -> origin/main` push is the production handoff pattern.
+- Remaining TODOs
+  - Manually verify the production game after deployment updates.
+  - Playtest the Blue Bus route, Stokes Bay stop readability, collision feel, and mobile framing.
+- Next steps
+  - Open the production game and confirm the Blue Bus route is live.
+
 ## 2026-06-09 - Blue Bus Stokes Bay route implementation
 
 - Date/time
