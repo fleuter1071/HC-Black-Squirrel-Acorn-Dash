@@ -19,6 +19,8 @@ const CAPE_SPEED_MULTIPLIER = 1.22;
 const BLUE_BUS_SPEED = 110;
 const BLUE_BUS_DWELL_SECONDS = 2.6;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
+const SHARE_IMAGE_WIDTH = 1200;
+const SHARE_IMAGE_HEIGHT = 630;
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -1715,10 +1717,159 @@ document.getElementById("helpButton").addEventListener("click",()=>{
 document.getElementById("startButton").addEventListener("click",async()=>{if(window.gsap)gsap.killTweensOf("#startButton");if(isMobileView())await requestMobileFullscreen(true);startGame();});
 document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
-function getShareText(){return `Can you beat my SBS reunion score? I earned the ${getRank()} title with ${state.score} points and ${state.secrets}/5 campus secrets in SBS: Acorn Dash. My best moment: ${getBestMoment()} ${location.href}`;}
-document.getElementById("whatsappButton").addEventListener("click",()=>window.open(`https://wa.me/?text=${encodeURIComponent(getShareText())}`,"_blank","noopener"));
-document.getElementById("shareButton").addEventListener("click",async()=>{const text=getShareText();try{if(navigator.share)await navigator.share({title:"SBS: Acorn Dash",text});else{await navigator.clipboard.writeText(text);showToast("Classmate challenge copied!");}}catch{}});
-document.getElementById("copyButton").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(getShareText());showToast("Challenge link copied!");}catch{}});
+function getPostcardSignature() {
+  const name=document.getElementById("playerName")?.value.trim().replace(/\s+/g," ")||"";
+  const year=(document.getElementById("classYear")?.value||"").replace(/\D/g,"").slice(0,4);
+  if(!name&&!year)return "";
+  return `${name||"A Haverford friend"}${year?` '${year.slice(-2)}`:""}`;
+}
+
+function getShareResult() {
+  return {
+    title: getRank(),
+    score: state.score,
+    secrets: state.secrets,
+    totalSecrets: landmarks.length,
+    combo: state.bestCombo,
+    bestMoment: getBestMoment(),
+    signature: getPostcardSignature()
+  };
+}
+
+function getShareText() {
+  const result=getShareResult();
+  const signed=result.signature?` Signed on the Honor Code by ${result.signature}.`:"";
+  return `Can you beat my SBS reunion score? I earned the ${result.title} title with ${result.score} points and ${result.secrets}/${result.totalSecrets} campus secrets in SBS: Acorn Dash. My best moment: ${result.bestMoment}${signed} ${location.href}`;
+}
+
+function wrapCanvasText(cardCtx,text,x,y,maxWidth,lineHeight,maxLines=3) {
+  const words=text.split(" ");
+  let line="",lines=0;
+  for(const word of words){
+    const test=line?`${line} ${word}`:word;
+    if(cardCtx.measureText(test).width>maxWidth&&line){
+      cardCtx.fillText(line,x,y);y+=lineHeight;lines++;
+      line=word;
+      if(lines>=maxLines-1)break;
+    }else line=test;
+  }
+  if(line)cardCtx.fillText(line,x,y);
+}
+
+function roundCanvasRect(cardCtx,x,y,w,h,r) {
+  cardCtx.beginPath();
+  cardCtx.roundRect(x,y,w,h,r);
+}
+
+function drawSharePostcard() {
+  const shareCanvas=document.getElementById("shareCanvas");
+  const cardCtx=shareCanvas.getContext("2d");
+  const result=getShareResult();
+  shareCanvas.width=SHARE_IMAGE_WIDTH;
+  shareCanvas.height=SHARE_IMAGE_HEIGHT;
+  cardCtx.clearRect(0,0,SHARE_IMAGE_WIDTH,SHARE_IMAGE_HEIGHT);
+
+  const grd=cardCtx.createLinearGradient(0,0,SHARE_IMAGE_WIDTH,SHARE_IMAGE_HEIGHT);
+  grd.addColorStop(0,"#fff8e7");grd.addColorStop(.55,"#f2e2be");grd.addColorStop(1,"#dfe9d6");
+  cardCtx.fillStyle=grd;cardCtx.fillRect(0,0,SHARE_IMAGE_WIDTH,SHARE_IMAGE_HEIGHT);
+  cardCtx.fillStyle="rgba(49,84,64,.08)";
+  for(let x=-60;x<SHARE_IMAGE_WIDTH;x+=88){cardCtx.fillRect(x,0,34,SHARE_IMAGE_HEIGHT);}
+
+  cardCtx.fillStyle="#fffdf6";roundCanvasRect(cardCtx,58,54,1084,522,24);cardCtx.fill();
+  cardCtx.strokeStyle="#d7c49e";cardCtx.lineWidth=7;cardCtx.stroke();
+  cardCtx.strokeStyle="rgba(128,105,82,.35)";cardCtx.lineWidth=2;roundCanvasRect(cardCtx,80,76,1040,478,12);cardCtx.stroke();
+
+  cardCtx.fillStyle="#6a0000";cardCtx.font="900 38px Georgia, serif";cardCtx.textAlign="left";
+  cardCtx.fillText("Greetings from Haverford",112,132);
+  cardCtx.fillStyle="#25211c";cardCtx.font="900 20px Nunito, Arial, sans-serif";
+  cardCtx.fillText("SBS: ACORN DASH RESULT CARD",114,166);
+
+  cardCtx.save();
+  cardCtx.translate(988,142);cardCtx.rotate(.13);
+  cardCtx.fillStyle="#6a0000";roundCanvasRect(cardCtx,-68,-58,136,116,10);cardCtx.fill();
+  cardCtx.strokeStyle="#fff3c6";cardCtx.lineWidth=5;cardCtx.strokeRect(-52,-42,104,84);
+  cardCtx.fillStyle="#fff8db";cardCtx.textAlign="center";cardCtx.font="900 31px Georgia, serif";cardCtx.fillText("SBS",0,-4);
+  cardCtx.font="900 13px Nunito, Arial, sans-serif";cardCtx.fillText("REUNION",0,25);
+  cardCtx.restore();
+
+  cardCtx.fillStyle="#6a0000";cardCtx.font="900 92px Georgia, serif";cardCtx.textAlign="left";
+  cardCtx.fillText(String(result.score),124,310);
+  cardCtx.fillStyle="#6a604c";cardCtx.font="900 28px Nunito, Arial, sans-serif";
+  cardCtx.fillText("acorns collected",258,286);
+  cardCtx.fillStyle="#25211c";cardCtx.font="900 42px Nunito, Arial, sans-serif";
+  wrapCanvasText(cardCtx,result.title,258,336,500,48,2);
+
+  const statY=410;
+  [["Campus secrets",`${result.secrets} / ${result.totalSecrets}`],["Best streak",`${result.combo}x`],["Best moment",result.bestMoment.replace(/\.$/,"")]].forEach(([label,value],i)=>{
+    const x=124+i*290,w=i===2?360:240;
+    cardCtx.fillStyle=i===2?"#fff1bd":"#f1eadb";roundCanvasRect(cardCtx,x,statY,w,96,14);cardCtx.fill();
+    cardCtx.fillStyle="#71664f";cardCtx.font="900 18px Nunito, Arial, sans-serif";cardCtx.fillText(label,x+20,statY+34);
+    cardCtx.fillStyle="#25211c";cardCtx.font=i===2?"900 20px Nunito, Arial, sans-serif":"900 34px Nunito, Arial, sans-serif";
+    wrapCanvasText(cardCtx,value,x+20,statY+70,w-40,25,2);
+  });
+
+  cardCtx.save();
+  cardCtx.translate(900,260);
+  cardCtx.fillStyle="#1f1d19";cardCtx.beginPath();cardCtx.ellipse(0,42,78,48,0,0,Math.PI*2);cardCtx.fill();
+  cardCtx.beginPath();cardCtx.arc(-48,0,42,0,Math.PI*2);cardCtx.fill();
+  cardCtx.beginPath();cardCtx.arc(-68,-40,18,0,Math.PI*2);cardCtx.arc(-28,-40,18,0,Math.PI*2);cardCtx.fill();
+  cardCtx.strokeStyle="#1f1d19";cardCtx.lineWidth=28;cardCtx.beginPath();cardCtx.arc(56,8,64,-.5,1.9);cardCtx.stroke();
+  cardCtx.fillStyle="#fff8db";cardCtx.beginPath();cardCtx.arc(-62,-8,5,0,Math.PI*2);cardCtx.fill();
+  cardCtx.fillStyle="#8a5d27";cardCtx.beginPath();cardCtx.ellipse(86,86,28,38,.22,0,Math.PI*2);cardCtx.fill();
+  cardCtx.fillStyle="#5b3a1e";cardCtx.fillRect(72,42,28,14);
+  cardCtx.restore();
+
+  cardCtx.fillStyle="#315440";cardCtx.font="900 24px Nunito, Arial, sans-serif";cardCtx.textAlign="left";
+  cardCtx.fillText(result.signature?`Signed on the Honor Code: ${result.signature}`:"Signed on the Honor Code: Optional",112,548);
+  cardCtx.fillStyle="#6a604c";cardCtx.font="800 18px Nunito, Arial, sans-serif";cardCtx.textAlign="right";
+  cardCtx.fillText(location.host||"SBS: Acorn Dash",1088,548);
+}
+
+function getShareImageBlob() {
+  drawSharePostcard();
+  return new Promise(resolve=>document.getElementById("shareCanvas").toBlob(resolve,"image/png",.95));
+}
+
+async function getShareImageFile() {
+  const blob=await getShareImageBlob();
+  return blob?new File([blob],"sbs-acorn-dash-postcard.png",{type:"image/png"}):null;
+}
+
+async function shareWithNativePicker(preferFiles=false) {
+  const text=getShareText();
+  if(!navigator.share)return false;
+  if(preferFiles){
+    const file=await getShareImageFile();
+    if(file&&navigator.canShare?.({files:[file]})){
+      await navigator.share({title:"SBS: Acorn Dash",text,files:[file]});
+      return true;
+    }
+  }
+  await navigator.share({title:"SBS: Acorn Dash",text});
+  return true;
+}
+
+document.getElementById("honorCardForm").addEventListener("submit",event=>event.preventDefault());
+document.getElementById("classYear").addEventListener("input",event=>{event.target.value=event.target.value.replace(/\D/g,"").slice(0,4);});
+document.getElementById("whatsappButton").addEventListener("click",async()=>{
+  try{if(await shareWithNativePicker(true))return;}catch{}
+  window.open(`https://wa.me/?text=${encodeURIComponent(getShareText())}`,"_blank","noopener");
+  showToast("Postcard text opened for WhatsApp.");
+});
+document.getElementById("shareButton").addEventListener("click",async()=>{
+  try{if(await shareWithNativePicker(true))return;}catch{}
+  try{await navigator.clipboard.writeText(getShareText());showToast("Classmate challenge copied!");}catch{}
+});
+document.getElementById("copyButton").addEventListener("click",async()=>{
+  const text=getShareText();
+  try{
+    if(window.ClipboardItem&&navigator.clipboard?.write){
+      const blob=await getShareImageBlob();
+      if(blob){await navigator.clipboard.write([new ClipboardItem({"image/png":blob,"text/plain":new Blob([text],{type:"text/plain"})})]);showToast("Postcard image copied!");return;}
+    }
+  }catch{}
+  try{await navigator.clipboard.writeText(text);showToast("Challenge link copied!");}catch{}
+});
 
 resizeCanvasForViewport();
 refreshOrientationGate();
