@@ -385,3 +385,45 @@ Session notes will be appended here as the game evolves.
 - Next steps
   - Run a focused mobile QA pass on iPhone Safari.
   - If joystick still feels loose or twitchy, tune `max=rect.width*.18` slightly up or down rather than changing player speed.
+
+## 2026-06-12 - Shareable postcard result card and production push
+
+- Date/time
+  - 2026-06-12, America/New_York.
+- Feature name, work name, description, and value provided
+  - Built the roadmap's postcard-style end-of-run result card enhancement.
+  - Added optional player name and class year fields on an Honor Code basis so the card can feel personal without requiring identity data.
+  - Generated a hidden `1200x630` PNG share image from the existing run stats for social/mobile sharing.
+  - Wired the image into the current share/copy flow with native file sharing first, text sharing second, and clipboard/text fallbacks.
+  - Committed and pushed production branch update: `0fdd789` (`Add shareable result postcard`).
+- Files changed
+  - `index.html`
+  - `styles.css`
+  - `script.js`
+- Technical Architecture changes or key technical decisions made
+  - Added a hidden `shareCanvas` in the existing end overlay instead of introducing a new page or dependency.
+  - Added `SHARE_IMAGE_WIDTH` and `SHARE_IMAGE_HEIGHT` constants near the top of `script.js`.
+  - Added `getShareResult()` as the shared result-data helper so on-screen copy, share text, and image rendering all read from the same game state.
+  - Added `drawSharePostcard()` and related canvas helpers to render the postcard PNG locally in the browser.
+  - Preserved the existing WhatsApp/text share path while adding richer native share support when `navigator.canShare({ files })` is available.
+  - Added mobile-safe result-card scrolling and wrapping so the extra signature fields do not trap or crowd the end screen.
+- Assumptions
+  - Production is connected to `origin/main`.
+  - Browsers that support native file sharing should receive the PNG; browsers that do not should still get useful share text.
+  - Name and class year are intentionally optional because the card is a playful social artifact, not an account/profile feature.
+- Known limitations
+  - WhatsApp URL sharing cannot directly attach the generated PNG, so WhatsApp gets native image sharing only when the browser/share sheet supports it; otherwise it falls back to text.
+  - Real-device mobile QA is still useful for iOS and Android share-sheet behavior because support differs by browser and OS.
+  - The share image is generated client-side and is not uploaded or hosted, so link previews from social platforms will not automatically use the custom PNG unless the user shares the file directly.
+- Key learnings that you can bring with you to future sessions
+  - For share features, design the ladder of fallbacks first: native file share, native text share, clipboard image/text, then text-only.
+  - Canvas helpers must draw against the intended canvas context; shared game-canvas helpers that close over `ctx` can accidentally render to the wrong surface.
+  - Optional identity fields are safer for playful alumni sharing than required profile fields.
+  - A strong Product Manager should understand that "share image" and "link preview image" are different: one is user-shared media, the other requires hosted metadata.
+- Remaining TODOs
+  - QA native share behavior on real iPhone Safari and Android Chrome.
+  - Consider adding a visible "Download postcard" button if users want a more explicit way to save the PNG.
+  - Consider hosted Open Graph image support later if the goal becomes rich link previews rather than user-shared image files.
+- Next steps
+  - Run a device QA pass focused on end-card scroll comfort, share-sheet file attachment, WhatsApp fallback, and clipboard behavior.
+  - If social previews become important, plan a lightweight hosted metadata strategy separately from the static client-side canvas feature.

@@ -21,6 +21,36 @@ const BLUE_BUS_DWELL_SECONDS = 2.6;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
 const SHARE_IMAGE_WIDTH = 1200;
 const SHARE_IMAGE_HEIGHT = 630;
+const SOUND_SPRITE_SOURCES = ["assets/audio/sbs-sounds.wav"];
+const SOUND_SPRITES = {
+  start: [0, 450],
+  acorn: [530, 180],
+  secret: [790, 700],
+  golden: [1570, 620],
+  powerup: [2270, 460],
+  cape: [2810, 860],
+  shield: [3750, 440],
+  dodge: [4270, 240],
+  bump: [4590, 380],
+  wobble: [5050, 560],
+  bird: [5690, 500],
+  quack: [6270, 340],
+  horn: [6690, 620],
+  urgent: [7390, 740],
+  finish: [8210, 960]
+};
+const SOUND_PLAYBACK = {
+  acorn: { cooldown: .055, rateJitter: .035, volume: .52 },
+  dodge: { cooldown: .18, rateJitter: .025, volume: .58 },
+  horn: { cooldown: 1.2, volume: .64 },
+  bird: { cooldown: 2.5, volume: .34 },
+  quack: { cooldown: 1.5, volume: .4 },
+  bump: { cooldown: .28, volume: .72 },
+  wobble: { cooldown: .34, volume: .74 },
+  secret: { volume: .82 },
+  golden: { volume: .8 },
+  finish: { volume: .78 }
+};
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -81,6 +111,8 @@ const hazardRoutes = [
 
 let state;
 let audioCtx;
+let gameSoundSprite;
+const lastSoundAt = {};
 let lastTime = 0;
 let toastTimer;
 let storyTimer;
@@ -110,6 +142,7 @@ function newState() {
 function startGame() {
   const muted = state?.muted || false;
   state = newState();
+  Object.keys(lastSoundAt).forEach(name => delete lastSoundAt[name]);
   state.muted = muted;
   state.introCameraDuration=reducedMotionQuery.matches ? .2 : isMobileView() ? 2 : 2.8;
   state.introCamera=state.introCameraDuration;
@@ -398,7 +431,7 @@ function collectAcorn(acorn) {
     showToast(`${acorn.label}: ${acorn.landmark.name} secret found!`);
     document.getElementById("missionTitle").textContent = acorn.landmark.name;
     document.getElementById("missionText").textContent = acorn.landmark.note;
-    playTone(880, .08, "triangle"); playTone(1175, .14, "triangle", .09);
+    playSound("secret");
   } else {playSound("acorn");updateTrailChapter();}
 }
 
@@ -555,7 +588,7 @@ function blockWithSkeetersPie(hazard) {
   addScorePop(state.player.x, state.player.y-22, "PIZZA BOX BLOCK!", "#fff0a8", 19);
   showToast("Pizza box saved the stash!");
   state.reactions.push({ x:state.player.x, y:state.player.y-32, life:1.1, text:"SKEETER'S!", color:"#fff1bd", stars:true });
-  playSound("powerup");
+  playSound("shield");
 }
 
 function spillAcorn(count) {
@@ -1658,14 +1691,59 @@ function updateHud(){
   document.querySelector(".timer-card").classList.toggle("urgent",state.running&&state.timeLeft<=30);
 }
 function showToast(text){const el=document.getElementById("toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1800);}
-function playTone(freq,duration,type="sine",delay=0,volume=.05){if(state?.muted)return;audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(volume,audioCtx.currentTime+delay);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+delay+duration);o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+delay);o.stop(audioCtx.currentTime+delay+duration);}
+function initGameAudio() {
+  if(gameSoundSprite || !window.Howl)return gameSoundSprite;
+  gameSoundSprite = new Howl({
+    src: SOUND_SPRITE_SOURCES,
+    sprite: SOUND_SPRITES,
+    volume: .72,
+    preload: true,
+    onloaderror: () => { gameSoundSprite = null; }
+  });
+  window.Howler?.mute(!!state?.muted);
+  return gameSoundSprite;
+}
+
+function playTone(freq,duration,type="sine",delay=0,volume=.05){
+  if(state?.muted)return;
+  const AudioClass = window.AudioContext || window.webkitAudioContext;
+  if(!AudioClass)return;
+  audioCtx ||= new AudioClass();
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;
+  o.frequency.value=freq;
+  g.gain.setValueAtTime(volume,audioCtx.currentTime+delay);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+delay+duration);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start(audioCtx.currentTime+delay);
+  o.stop(audioCtx.currentTime+delay+duration);
+}
+
+function getSoundClock() {
+  return state?.elapsed ?? performance.now() / 1000;
+}
+
 function playSound(name){
+  if(state?.muted)return;
+  const options = SOUND_PLAYBACK[name] || {};
+  const now = getSoundClock();
+  if(options.cooldown && lastSoundAt[name] && now - lastSoundAt[name] < options.cooldown)return;
+  lastSoundAt[name] = now;
+  const soundSprite = initGameAudio();
+  if(soundSprite && SOUND_SPRITES[name]){
+    const soundId = soundSprite.play(name);
+    if(soundId && options.volume != null)soundSprite.volume(options.volume, soundId);
+    if(soundId && options.rateJitter)soundSprite.rate(1 + (Math.random() * 2 - 1) * options.rateJitter, soundId);
+    return;
+  }
   const sounds={
     start:[[440,.07,"square",0],[660,.09,"square",.08]],
     acorn:[[740,.07,"triangle",0,.035]],
+    secret:[[740,.08,"triangle",0,.045],[988,.14,"sine",.1,.04],[1319,.18,"triangle",.28,.035]],
     golden:[[784,.08,"triangle",0],[1047,.1,"triangle",.09],[1319,.16,"triangle",.2]],
     powerup:[[587,.08,"triangle",0],[784,.13,"triangle",.1]],
     cape:[[523,.07,"triangle",0,.05],[784,.09,"triangle",.08,.05],[1175,.14,"triangle",.18,.045]],
+    shield:[[260,.08,"square",0,.035],[520,.12,"triangle",.08,.04],[780,.12,"triangle",.22,.035]],
     dodge:[[860,.05,"triangle",0,.035],[1020,.08,"triangle",.07,.03]],
     bump:[[165,.1,"square",0],[125,.16,"sawtooth",.08]],
     wobble:[[180,.1,"sawtooth",0],[145,.1,"sawtooth",.1],[115,.18,"sawtooth",.2]],
@@ -1675,7 +1753,7 @@ function playSound(name){
     urgent:[[330,.08,"square",0],[440,.08,"square",.12],[550,.12,"square",.24]],
     finish:[[523,.12,"sine",0],[659,.12,"sine",.13],[784,.18,"sine",.26]]
   };
-  sounds[name].forEach(args=>playTone(...args));
+  sounds[name]?.forEach(args=>playTone(...args));
 }
 function frame(t){const dt=Math.min((t-lastTime)/1000,.05)||0;lastTime=t;update(dt);draw();requestAnimationFrame(frame);}
 
@@ -1716,7 +1794,11 @@ document.getElementById("helpButton").addEventListener("click",()=>{
 });
 document.getElementById("startButton").addEventListener("click",async()=>{if(window.gsap)gsap.killTweensOf("#startButton");if(isMobileView())await requestMobileFullscreen(true);startGame();});
 document.getElementById("restartButton").addEventListener("click",startGame);
-document.getElementById("soundButton").addEventListener("click",()=>{state.muted=!state.muted;document.getElementById("soundIcon").textContent=state.muted?"×":"♪";});
+document.getElementById("soundButton").addEventListener("click",()=>{
+  state.muted=!state.muted;
+  window.Howler?.mute(state.muted);
+  document.getElementById("soundIcon").textContent=state.muted?"×":"♪";
+});
 function getPostcardSignature() {
   const name=document.getElementById("playerName")?.value.trim().replace(/\s+/g," ")||"";
   const year=(document.getElementById("classYear")?.value||"").replace(/\D/g,"").slice(0,4);
