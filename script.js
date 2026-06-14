@@ -22,25 +22,34 @@ const STORAGE_KEY = "sbs-acorn-dash-bests";
 const SHARE_IMAGE_WIDTH = 1200;
 const SHARE_IMAGE_HEIGHT = 630;
 const SOUND_SPRITE_SOURCES = ["assets/audio/sbs-sounds.wav"];
+const VOICE_LINES = {
+  sbsGreeting: "assets/audio/voice/sbs-greeting.mp3"
+};
+const POWERUP_AUDIO = {
+  capeFlight: "assets/audio/powerups/super-sbs-flight.mp3"
+};
+const SBS_GREETING_DISTANCE = 82;
+const CAPE_FLIGHT_VOLUME = .42;
+const CAPE_FLIGHT_FADE_SECONDS = 1.35;
 const SOUND_SPRITES = {
   start: [0, 450],
-  acorn: [530, 180],
-  secret: [790, 700],
-  golden: [1570, 620],
-  powerup: [2270, 460],
-  cape: [2810, 860],
-  shield: [3750, 440],
-  dodge: [4270, 240],
-  bump: [4590, 380],
-  wobble: [5050, 560],
-  bird: [5690, 500],
-  quack: [6270, 340],
-  horn: [6690, 620],
-  urgent: [7390, 740],
-  finish: [8210, 960]
+  acorn: [530, 240],
+  secret: [850, 700],
+  golden: [1630, 620],
+  powerup: [2330, 460],
+  cape: [2870, 860],
+  shield: [3810, 440],
+  dodge: [4330, 240],
+  bump: [4650, 380],
+  wobble: [5110, 560],
+  bird: [5750, 500],
+  quack: [6330, 340],
+  horn: [6750, 620],
+  urgent: [7450, 740],
+  finish: [8270, 960]
 };
 const SOUND_PLAYBACK = {
-  acorn: { cooldown: .055, rateJitter: .035, volume: .52 },
+  acorn: { cooldown: .055, rateJitter: .01, volume: .58 },
   dodge: { cooldown: .18, rateJitter: .025, volume: .58 },
   horn: { cooldown: 1.2, volume: .64 },
   bird: { cooldown: 2.5, volume: .34 },
@@ -51,6 +60,25 @@ const SOUND_PLAYBACK = {
   golden: { volume: .8 },
   finish: { volume: .78 }
 };
+const SOUND_REVIEW_ITEMS = [
+  { id:"start", label:"Start cue", category:"Start", use:"Plays when the countdown ends and SBS can start scurrying." },
+  { id:"acorn", label:"Acorn pickup", category:"Common reward", use:"Plays when SBS collects a regular trail acorn." },
+  { id:"secret", label:"Hidden memory", category:"Discovery reward", use:"Plays when SBS finds a hidden landmark memory like the tray, key, cupola, stone, or mail." },
+  { id:"golden", label:"Golden acorn", category:"Rare reward", use:"Plays when SBS collects the temporary golden acorn bonus." },
+  { id:"powerup", label:"Powerup pickup", category:"Powerup", use:"Plays for most powerups: DC Soup, Arboretum Leaf, Honor Code Scroll, and Skeeter's Pie pickup." },
+  { id:"cape", label:"Super SBS cape", category:"Powerup", use:"Plays when SBS collects the Super SBS Cape and launches into flight mode." },
+  { id:"shield", label:"Skeeter's block", category:"Protection", use:"Plays when the Skeeter's pizza box blocks a collision and saves the stash." },
+  { id:"dodge", label:"Near miss", category:"Skill reward", use:"Plays when SBS earns a close-call dodge bonus near students, bikes, cart, or bus." },
+  { id:"bump", label:"Small bump", category:"Mistake", use:"Plays when SBS hits a student or bike without protection." },
+  { id:"wobble", label:"Big bump", category:"Mistake", use:"Plays when SBS gets bumped by the golf cart or Blue Bus." },
+  { id:"bird", label:"Ambient bird", category:"Campus ambience", use:"Plays occasionally as a light campus background sound." },
+  { id:"quack", label:"Duck quack", category:"Campus ambience", use:"Plays occasionally near the Duck Pond ambience loop." },
+  { id:"horn", label:"Golf cart horn", category:"Hazard warning", use:"Plays when the golf cart gets close enough to warn the player." },
+  { id:"urgent", label:"Final scurry", category:"Timer warning", use:"Plays once when 30 seconds remain." },
+  { id:"finish", label:"End card", category:"Run complete", use:"Plays when the final postcard/result card appears." },
+  { id:"sbsGreeting", label:"Student greeting", category:"Voice cameo", use:"Plays once per run when SBS passes a student on the campus paths." },
+  { id:"capeFlight", label:"Cape flight layer", category:"Powerup layer", use:"Starts when SBS gets the Super SBS Cape, plays while flight is active, then fades out as it ends." }
+];
 const mobileQuery = window.matchMedia("(pointer: coarse), (max-width: 760px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -112,7 +140,11 @@ const hazardRoutes = [
 let state;
 let audioCtx;
 let gameSoundSprite;
+const voiceSounds = {};
+const powerupSounds = {};
 const lastSoundAt = {};
+let capeFlightSoundId = null;
+let capeFlightFading = false;
 let lastTime = 0;
 let toastTimer;
 let storyTimer;
@@ -132,7 +164,7 @@ function newState() {
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null, powerupBag: [],
-    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, sbsGreetingPlayed:false, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}],
     professorBoltz: { x:292, y:862, segment:0, progress:0, speed:24, dwellLeft:1.8, facing:-1, wave:0, route:[[292,862],[246,840],[192,826],[134,846],[103,884],[128,930],[204,948],[270,916],[292,862]] }
@@ -141,6 +173,7 @@ function newState() {
 
 function startGame() {
   const muted = state?.muted || false;
+  stopCapeFlightAudio(0);
   state = newState();
   Object.keys(lastSoundAt).forEach(name => delete lastSoundAt[name]);
   state.muted = muted;
@@ -170,6 +203,7 @@ function startGame() {
 }
 
 function endGame() {
+  stopCapeFlightAudio(.25);
   state.running = false; state.ended = true;
   resetJoystick();
   document.getElementById("mobileHelp").classList.remove("show");
@@ -240,6 +274,7 @@ function update(dt) {
     state.player.capeLaunch.capeScale=1+Math.max(0,state.player.capeLaunch.capeScale-1-dt*1.2);
   }
   Object.keys(state.activePowerups).forEach(id => state.activePowerups[id] = Math.max(0, state.activePowerups[id] - dt));
+  updateCapeFlightAudio();
   updateSecretRevealAnimations();
 
   if (!hasSpecialEvent() && state.elapsed >= state.nextGoldenAt) spawnGoldenAcorn();
@@ -260,7 +295,7 @@ function update(dt) {
     } else if (distance(state.player, state.powerup) < 36) collectPowerup();
   }
 
-  state.hazards.forEach(h => {moveHazard(h, dt);updateNearMiss(h);});
+  state.hazards.forEach(h => {moveHazard(h, dt);updateNearMiss(h);maybePlaySbsGreeting(h);});
   const cart=state.hazards.find(h=>h.type==="cart"),cartDistance=distance(state.player,cart);
   if(cartDistance<165&&state.hornReady){playSound("horn");state.hornReady=false;}
   if(cartDistance>260)state.hornReady=true;
@@ -452,6 +487,7 @@ function collectPowerup() {
   if (type.id === "cape") {
     state.capeFlights++;
     triggerCapeComicLaunch();
+    startCapeFlightAudio();
   }
   state.powerup = null;
   state.nextPowerupAt = state.elapsed + POWERUP_INTERVAL;
@@ -1463,6 +1499,16 @@ function updateProfessorBoltz(dt) {
   prof.wave=Math.max(0,prof.wave-dt);
 }
 
+function maybePlaySbsGreeting(passerby) {
+  if(!state.running || state.sbsGreetingPlayed || state.muted)return;
+  if(passerby.type !== "student")return;
+  if(distance(state.player, passerby) > SBS_GREETING_DISTANCE)return;
+  const voice = getVoiceSound("sbsGreeting");
+  if(!voice)return;
+  state.sbsGreetingPlayed = true;
+  voice.play();
+}
+
 function drawDuck(duck) {
   const y=duck.y+Math.sin(state.elapsed*2+duck.phase)*3;
   ctx.strokeStyle="rgba(255,255,255,.38)";ctx.lineWidth=2;
@@ -1673,6 +1719,7 @@ function updateJoystick(event) {
 
 function pauseForBackground() {
   if(!state.running||state.ended)return;
+  stopCapeFlightAudio(.25);
   state.running=false;state.paused=true;resetJoystick();
   document.getElementById("pauseOverlay").classList.add("show");
 }
@@ -1680,6 +1727,7 @@ function pauseForBackground() {
 function resumeGame() {
   if(!state.paused)return;
   state.paused=false;state.running=true;
+  if(state.activePowerups.cape > 0)startCapeFlightAudio();
   document.getElementById("pauseOverlay").classList.remove("show");
 }
 
@@ -1704,6 +1752,75 @@ function initGameAudio() {
   return gameSoundSprite;
 }
 
+function getVoiceSound(name) {
+  if(!window.Howl || !VOICE_LINES[name])return null;
+  voiceSounds[name] ||= new Howl({
+    src: [VOICE_LINES[name]],
+    volume: .72,
+    preload: true
+  });
+  window.Howler?.mute(!!state?.muted);
+  return voiceSounds[name];
+}
+
+function getPowerupSound(name) {
+  if(!window.Howl || !POWERUP_AUDIO[name])return null;
+  powerupSounds[name] ||= new Howl({
+    src: [POWERUP_AUDIO[name]],
+    volume: CAPE_FLIGHT_VOLUME,
+    loop: true,
+    preload: true
+  });
+  window.Howler?.mute(!!state?.muted);
+  return powerupSounds[name];
+}
+
+function startCapeFlightAudio() {
+  capeFlightFading = false;
+  if(state?.muted)return;
+  const sound = getPowerupSound("capeFlight");
+  if(!sound)return;
+  if(capeFlightSoundId)sound.stop(capeFlightSoundId);
+  capeFlightSoundId = sound.play();
+  sound.volume(0, capeFlightSoundId);
+  sound.fade(0, CAPE_FLIGHT_VOLUME, 420, capeFlightSoundId);
+}
+
+function updateCapeFlightAudio() {
+  const capeSeconds = state?.activePowerups?.cape || 0;
+  if(capeSeconds > 0 && !capeFlightSoundId && !state.muted){
+    startCapeFlightAudio();
+    return;
+  }
+  if(!capeFlightSoundId)return;
+  if(!state.running || state.paused || state.ended || state.muted || capeSeconds <= 0){
+    stopCapeFlightAudio(.45);
+    return;
+  }
+  if(!capeFlightFading && capeSeconds <= CAPE_FLIGHT_FADE_SECONDS){
+    capeFlightFading = true;
+    getPowerupSound("capeFlight")?.fade(CAPE_FLIGHT_VOLUME, 0, capeSeconds * 1000, capeFlightSoundId);
+  }
+}
+
+function stopCapeFlightAudio(fadeSeconds = .4) {
+  const sound = powerupSounds.capeFlight;
+  if(!sound || !capeFlightSoundId){
+    capeFlightSoundId = null;
+    capeFlightFading = false;
+    return;
+  }
+  const soundId = capeFlightSoundId;
+  capeFlightSoundId = null;
+  capeFlightFading = false;
+  if(fadeSeconds <= 0){
+    sound.stop(soundId);
+    return;
+  }
+  sound.fade(CAPE_FLIGHT_VOLUME, 0, fadeSeconds * 1000, soundId);
+  setTimeout(() => sound.stop(soundId), fadeSeconds * 1000 + 80);
+}
+
 function playTone(freq,duration,type="sine",delay=0,volume=.05){
   if(state?.muted)return;
   const AudioClass = window.AudioContext || window.webkitAudioContext;
@@ -1723,6 +1840,40 @@ function getSoundClock() {
   return state?.elapsed ?? performance.now() / 1000;
 }
 
+function playReviewSound(name) {
+  const wasMuted = state?.muted;
+  if(wasMuted){
+    state.muted = false;
+    window.Howler?.mute(false);
+    document.getElementById("soundIcon").textContent = "♪";
+  }
+  if(VOICE_LINES[name]){
+    getVoiceSound(name)?.play();
+    return;
+  }
+  if(POWERUP_AUDIO[name]){
+    const sound = getPowerupSound(name);
+    if(sound){
+      const soundId = sound.play();
+      sound.volume(CAPE_FLIGHT_VOLUME, soundId);
+      setTimeout(() => sound.fade(CAPE_FLIGHT_VOLUME, 0, 700, soundId), 1600);
+      setTimeout(() => sound.stop(soundId), 2380);
+    }
+    return;
+  }
+  const options = SOUND_PLAYBACK[name] || {};
+  const soundSprite = initGameAudio();
+  if(soundSprite && SOUND_SPRITES[name]){
+    const soundId = soundSprite.play(name);
+    if(soundId && options.volume != null)soundSprite.volume(options.volume, soundId);
+    return;
+  }
+  const previousMute = state?.muted;
+  if(state)state.muted = false;
+  playSound(name);
+  if(state)state.muted = previousMute;
+}
+
 function playSound(name){
   if(state?.muted)return;
   const options = SOUND_PLAYBACK[name] || {};
@@ -1737,23 +1888,60 @@ function playSound(name){
     return;
   }
   const sounds={
-    start:[[440,.07,"square",0],[660,.09,"square",.08]],
+    start:[[392,.11,"sine",0,.018],[523,.12,"triangle",.15,.015]],
     acorn:[[740,.07,"triangle",0,.035]],
     secret:[[740,.08,"triangle",0,.045],[988,.14,"sine",.1,.04],[1319,.18,"triangle",.28,.035]],
     golden:[[784,.08,"triangle",0],[1047,.1,"triangle",.09],[1319,.16,"triangle",.2]],
     powerup:[[587,.08,"triangle",0],[784,.13,"triangle",.1]],
     cape:[[523,.07,"triangle",0,.05],[784,.09,"triangle",.08,.05],[1175,.14,"triangle",.18,.045]],
-    shield:[[260,.08,"square",0,.035],[520,.12,"triangle",.08,.04],[780,.12,"triangle",.22,.035]],
-    dodge:[[860,.05,"triangle",0,.035],[1020,.08,"triangle",.07,.03]],
-    bump:[[165,.1,"square",0],[125,.16,"sawtooth",.08]],
-    wobble:[[180,.1,"sawtooth",0],[145,.1,"sawtooth",.1],[115,.18,"sawtooth",.2]],
+    shield:[[392,.1,"sine",0,.026],[523,.13,"triangle",.11,.024],[659,.1,"sine",.28,.02]],
+    dodge:[[740,.06,"sine",0,.022],[880,.08,"triangle",.08,.02]],
+    bump:[[220,.1,"sine",0,.024],[174,.14,"triangle",.09,.018]],
+    wobble:[[196,.12,"sine",0,.022],[165,.14,"sine",.16,.018],[247,.1,"triangle",.34,.015]],
     bird:[[1250,.05,"sine",0],[1580,.06,"sine",.09],[1390,.05,"sine",.18]],
-    quack:[[185,.1,"square",0,.025],[145,.14,"square",.08,.022]],
-    horn:[[370,.1,"square",0,.035],[315,.12,"square",.11,.03]],
-    urgent:[[330,.08,"square",0],[440,.08,"square",.12],[550,.12,"square",.24]],
+    quack:[[247,.09,"sine",0,.02],[196,.12,"triangle",.1,.016]],
+    horn:[[294,.13,"sine",0,.022],[392,.14,"triangle",.2,.018]],
+    urgent:[[392,.08,"triangle",0,.024],[523,.08,"triangle",.2,.022],[659,.11,"sine",.42,.02]],
     finish:[[523,.12,"sine",0],[659,.12,"sine",.13],[784,.18,"sine",.26]]
   };
   sounds[name]?.forEach(args=>playTone(...args));
+}
+
+function renderSoundReviewPanel() {
+  const list = document.getElementById("soundReviewList");
+  if(!list)return;
+  list.innerHTML = SOUND_REVIEW_ITEMS.map(item => `
+    <article class="sound-review-item" data-sound="${item.id}">
+      <div>
+        <div class="sound-review-name"><strong>${item.label}</strong><span>${item.id} · ${item.category}</span></div>
+        <p class="sound-review-use">${item.use}</p>
+      </div>
+      <div class="sound-review-actions">
+        <button class="sound-review-play" type="button" data-sound-play="${item.id}">Play</button>
+        <button class="sound-review-mark" type="button" data-sound-mark="${item.id}" aria-pressed="false">Needs change</button>
+      </div>
+    </article>
+  `).join("");
+  updateSoundReviewNotes();
+}
+
+function updateSoundReviewNotes() {
+  const notes = document.getElementById("soundReviewNotes");
+  if(!notes)return;
+  const marked = [...document.querySelectorAll(".sound-review-item.needs-change")].map(el => {
+    const item = SOUND_REVIEW_ITEMS.find(sound => sound.id === el.dataset.sound);
+    return item ? `- ${item.id}: ${item.label} (${item.use})` : "";
+  }).filter(Boolean);
+  notes.value = marked.length ? marked.join("\n") : "";
+}
+
+function toggleSoundReviewPanel(show) {
+  const panel = document.getElementById("soundReviewPanel");
+  const toggle = document.getElementById("soundReviewToggle");
+  if(!panel || !toggle)return;
+  const next = show ?? !panel.classList.contains("show");
+  panel.classList.toggle("show", next);
+  toggle.setAttribute("aria-expanded", next);
 }
 function frame(t){const dt=Math.min((t-lastTime)/1000,.05)||0;lastTime=t;update(dt);draw();requestAnimationFrame(frame);}
 
@@ -1797,7 +1985,26 @@ document.getElementById("restartButton").addEventListener("click",startGame);
 document.getElementById("soundButton").addEventListener("click",()=>{
   state.muted=!state.muted;
   window.Howler?.mute(state.muted);
+  if(state.muted)stopCapeFlightAudio(.2);
+  else if(state.activePowerups.cape > 0)startCapeFlightAudio();
   document.getElementById("soundIcon").textContent=state.muted?"×":"♪";
+});
+document.getElementById("soundReviewToggle").addEventListener("click",()=>toggleSoundReviewPanel());
+document.getElementById("soundReviewClose").addEventListener("click",()=>toggleSoundReviewPanel(false));
+document.getElementById("soundReviewList").addEventListener("click",event=>{
+  const playButton = event.target.closest("[data-sound-play]");
+  if(playButton){
+    playReviewSound(playButton.dataset.soundPlay);
+    return;
+  }
+  const markButton = event.target.closest("[data-sound-mark]");
+  if(markButton){
+    const item = markButton.closest(".sound-review-item");
+    const active = item.classList.toggle("needs-change");
+    markButton.setAttribute("aria-pressed", active);
+    markButton.textContent = active ? "Marked" : "Needs change";
+    updateSoundReviewNotes();
+  }
 });
 function getPostcardSignature() {
   const name=document.getElementById("playerName")?.value.trim().replace(/\s+/g," ")||"";
@@ -1959,4 +2166,4 @@ refreshFullscreenButton();
 window.addEventListener("resize",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
 document.addEventListener("fullscreenchange",()=>{refreshFullscreenButton();resizeCanvasForViewport();});
 screen.orientation?.addEventListener?.("change",()=>{resizeCanvasForViewport();refreshOrientationGate();refreshFullscreenButton();});
-loadSpriteAssets();state=newState();updateHud();initStartButtonBounce();requestAnimationFrame(frame);
+loadSpriteAssets();state=newState();updateHud();renderSoundReviewPanel();initStartButtonBounce();requestAnimationFrame(frame);

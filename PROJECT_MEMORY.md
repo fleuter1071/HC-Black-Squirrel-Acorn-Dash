@@ -427,3 +427,47 @@ Session notes will be appended here as the game evolves.
 - Next steps
   - Run a device QA pass focused on end-card scroll comfort, share-sheet file attachment, WhatsApp fallback, and clipboard behavior.
   - If social previews become important, plan a lightweight hosted metadata strategy separately from the static client-side canvas feature.
+
+## 2026-06-13 - Howler sound effects polish and production push
+
+- Date/time
+  - 2026-06-13, America/New_York.
+- Feature name, work name, description, and value provided
+  - Added a first Howler.js-powered sound-effects pipeline for the game.
+  - Vendored Howler locally so the static game does not depend on a CDN for audio playback.
+  - Added a generated SBS sound-sprite asset with named clips for core game moments.
+  - Polished playback with a distinct hidden-memory `secret` sound, Skeeter's `shield` block sound, per-sound volume tuning, cooldowns, and subtle rate variation for frequent sounds.
+  - Committed and pushed production branch update: `b94b8df` (`Add Howler sound effects polish`).
+- Files changed
+  - `index.html`
+  - `script.js`
+  - `assets/audio/sbs-sounds.wav`
+  - `assets/vendor/howler.core.min.js`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Added local `assets/vendor/howler.core.min.js` and loaded it before `script.js`.
+  - Added `SOUND_SPRITE_SOURCES`, `SOUND_SPRITES`, and `SOUND_PLAYBACK` near the top of `script.js` so audio timing and tuning stay easy to find.
+  - Kept the existing Web Audio oscillator tones as a fallback if Howler or the sound sprite fails.
+  - Changed hidden campus memories from raw tones to `playSound("secret")` so discoveries have a distinct reward cue.
+  - Added `lastSoundAt` cooldown tracking and reset it at the start of each run.
+  - Regenerated the WAV at a lower sample rate, reducing it from roughly 747 KB to roughly 408 KB while adding the new secret clip.
+- Assumptions
+  - `main` remains the production branch.
+  - The production host serves static assets from the repo, including `assets/audio` and `assets/vendor`.
+  - A single sound sprite is still appropriate for this stage because the sound set is small and generated.
+- Known limitations
+  - `ffmpeg` was not installed locally, so true WebM/MP3 compressed variants were not generated in this pass.
+  - Some generated clips may still need subjective listening and replacement based on user taste.
+  - Browser QA confirmed page load and no console errors, but a human listening pass is still needed to rate sound quality.
+- Key learnings that you can bring with you to future sessions
+  - For game audio, separate event naming from playback implementation: game code should call `playSound("secret")`, while audio code handles Howler, volume, cooldowns, and fallbacks.
+  - Frequent sounds need restraint: cooldowns and subtle rate variation prevent fatigue.
+  - Special discoveries should sound different from ordinary pickups because audio helps teach importance.
+  - Static games benefit from vendored runtime dependencies when the feature should work offline or without CDN reliability.
+- Remaining TODOs
+  - Add a temporary sound test panel so the user can identify disliked sounds by name.
+  - Replace or retune any disliked clips after a listening pass.
+  - Generate compressed WebM/MP3 variants when an encoder is available and add them to `SOUND_SPRITE_SOURCES`.
+- Next steps
+  - Use the sound test panel workflow to identify which clips should be softened, removed, or replaced.
+  - If keeping Howler long-term, consider adding a small user-facing volume preference in addition to mute.

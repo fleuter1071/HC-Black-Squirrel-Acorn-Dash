@@ -27,9 +27,10 @@ body {
 
 .game-shell { max-width: 1440px; margin: 0 auto; padding: 16px; }
 
-.topbar, .brand, .button-row { display: flex; align-items: center; }
+.topbar, .brand, .button-row, .topbar-actions { display: flex; align-items: center; }
 .topbar { justify-content: space-between; margin-bottom: 12px; }
 .brand { gap: 12px; }
+.topbar-actions { gap: 8px; }
 .brand-mark {
   display: grid; width: 56px; height: 56px; place-items: center;
   color: var(--cream); border-radius: 16px; background: var(--squirrel-black);
@@ -43,6 +44,10 @@ h2 { font-size: clamp(38px, 7vw, 68px); }
 .icon-button {
   width: 48px; height: 48px; color: var(--forest); border: 2px solid #bdb297;
   border-radius: 50%; background: #fffaf0; font-size: 24px; cursor: pointer;
+}
+.sound-review-toggle {
+  padding: 10px 13px; color: var(--forest); border: 2px solid #bdb297; border-radius: 999px;
+  background: #fffaf0; font-size: 12px; font-weight: 900; cursor: pointer;
 }
 .game-frame {
   position: relative; aspect-ratio: 16 / 10; overflow: hidden;
@@ -226,6 +231,51 @@ button { font: inherit; }
 .honor-fields input:focus { border-color: var(--haverford-red); box-shadow: 0 0 0 3px rgba(106,0,0,.13); }
 .share-canvas { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
+.sound-review-panel {
+  position: fixed; top: 14px; right: 14px; z-index: 50; display: none;
+  width: min(430px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); overflow: auto;
+  padding: 14px; color: var(--squirrel-black); border: 2px solid #bcae8f; border-radius: 16px;
+  background: rgba(255,250,240,.98); box-shadow: 0 24px 70px rgba(13,40,31,.28);
+}
+.sound-review-panel.show { display: block; }
+.sound-review-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sound-review-header span {
+  display: block; color: #817354; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;
+}
+.sound-review-header strong { color: var(--forest); font-family: var(--brand-serif); font-size: 24px; }
+.sound-review-close {
+  width: 34px; height: 34px; color: var(--forest); border: 2px solid #c8b997; border-radius: 50%;
+  background: #fffdf6; font-size: 20px; font-weight: 900; cursor: pointer;
+}
+.sound-review-copy { margin: 8px 0 12px; color: #665f50; font-size: 13px; line-height: 1.35; }
+.sound-review-list { display: grid; gap: 8px; }
+.sound-review-item {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+  padding: 10px; border: 1px solid rgba(94,78,46,.2); border-radius: 10px; background: #fffdf8;
+}
+.sound-review-item.needs-change { border-color: rgba(127, 0, 0, .45); background: #fff7f4; }
+.sound-review-name { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.sound-review-name strong { color: var(--forest); font-size: 15px; }
+.sound-review-name span {
+  color: #8f6b2d; font-size: 10px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase;
+}
+.sound-review-use { margin: 3px 0 0; color: #5f5a4d; font-size: 12px; line-height: 1.35; }
+.sound-review-actions { display: flex; gap: 5px; }
+.sound-review-play, .sound-review-mark {
+  height: 32px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 900; cursor: pointer;
+}
+.sound-review-play { color: #fffdf6; border: 0; background: var(--haverford-red); }
+.sound-review-mark { color: var(--squirrel-black); border: 2px solid #c8b997; background: transparent; }
+.sound-review-item.needs-change .sound-review-mark { color: #fffdf6; border-color: var(--haverford-red); background: var(--haverford-red); }
+.sound-review-summary { margin-top: 12px; }
+.sound-review-summary label {
+  display: block; margin-bottom: 5px; color: #817354; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;
+}
+.sound-review-summary textarea {
+  width: 100%; min-height: 88px; resize: vertical; padding: 10px; color: #3f382c;
+  border: 1px solid rgba(94,78,46,.28); border-radius: 10px; background: #fffdf8; font: 12px/1.4 var(--brand-sans);
+}
+
 .footer-note { display: flex; justify-content: center; gap: 8px; padding: 15px; color: #736c5d; font-size: 12px; text-align: center; }
 
 @media (pointer: coarse), (max-width: 760px) {
@@ -233,6 +283,8 @@ button { font: inherit; }
   .desktop-instruction { display: none !important; }
   .mobile-instruction { display: block; }
   .fullscreen-button { display: none; }
+  .topbar-actions { gap: 6px; }
+  .sound-review-toggle { padding: 8px 10px; font-size: 10px; }
   .rotate-note { display: block; margin: 12px 0 -5px; color: #8a7048; font-size: 11px; font-weight: 900; }
   .mission-card { display: none; }
   .item-legend { display: none; }
@@ -290,6 +342,13 @@ button { font: inherit; }
   .mobile-help.show { display: grid; gap: 6px; }
   .mobile-help strong { color: var(--forest); font-size: 11px; }
   .mobile-help span { display: flex; align-items: center; gap: 6px; }
+  .sound-review-panel {
+    top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right));
+    width: min(390px, calc(100vw - 16px)); max-height: calc(100dvh - 16px - env(safe-area-inset-top));
+    padding: 12px;
+  }
+  .sound-review-item { grid-template-columns: 1fr; }
+  .sound-review-actions { justify-content: flex-start; }
   .joystick {
     position: absolute; left: calc(12px + env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 5;
     display: block; width: 132px; height: 132px; touch-action: none; user-select: none;

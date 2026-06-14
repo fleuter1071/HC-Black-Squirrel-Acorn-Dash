@@ -20,9 +20,12 @@
             <h1>Super Black Squirrel</h1>
           </div>
         </div>
-        <button class="icon-button" id="soundButton" type="button" aria-label="Mute sounds" title="Mute sounds">
-          <span id="soundIcon">♪</span>
-        </button>
+        <div class="topbar-actions">
+          <button class="sound-review-toggle" id="soundReviewToggle" type="button" aria-expanded="false" aria-controls="soundReviewPanel">Sound review</button>
+          <button class="icon-button" id="soundButton" type="button" aria-label="Mute sounds" title="Mute sounds">
+            <span id="soundIcon">♪</span>
+          </button>
+        </div>
       </header>
 
       <section class="game-frame" id="gameFrame" aria-label="Super Black Squirrel game">
@@ -188,6 +191,21 @@
         <span>Built for reunion friends and fellow Fords.</span>
       </footer>
     </main>
+    <aside class="sound-review-panel" id="soundReviewPanel" aria-label="Sound effect review panel">
+      <div class="sound-review-header">
+        <div>
+          <span>Temporary tool</span>
+          <strong>Sound review</strong>
+        </div>
+        <button class="sound-review-close" id="soundReviewClose" type="button" aria-label="Close sound review">×</button>
+      </div>
+      <p class="sound-review-copy">Play each sound, see where it appears, and mark anything that should change.</p>
+      <div class="sound-review-list" id="soundReviewList"></div>
+      <div class="sound-review-summary">
+        <label for="soundReviewNotes">Change list</label>
+        <textarea id="soundReviewNotes" readonly placeholder="Mark sounds to build a list here."></textarea>
+      </div>
+    </aside>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="assets/vendor/howler.core.min.js"></script>
     <script src="script.js"></script>
