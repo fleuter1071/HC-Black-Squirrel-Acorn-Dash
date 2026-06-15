@@ -19,6 +19,7 @@ const CAPE_SPEED_MULTIPLIER = 1.22;
 const BLUE_BUS_SPEED = 110;
 const BLUE_BUS_DWELL_SECONDS = 2.6;
 const STORAGE_KEY = "sbs-acorn-dash-bests";
+const ZONE_PROGRESS_KEY = "sbs-acorn-dash-zone-progress";
 const SHARE_IMAGE_WIDTH = 1200;
 const SHARE_IMAGE_HEIGHT = 630;
 const SOUND_SPRITE_SOURCES = ["assets/audio/sbs-sounds.wav"];
@@ -31,6 +32,52 @@ const POWERUP_AUDIO = {
 const SBS_GREETING_DISTANCE = 82;
 const CAPE_FLIGHT_VOLUME = .42;
 const CAPE_FLIGHT_FADE_SECONDS = 1.35;
+const MODE_HUB = "hub";
+const MODE_DINING_CENTER = "diningCenter";
+const DINING_CENTER_ZONE = {
+  id: MODE_DINING_CENTER,
+  name: "Dining Center Dash",
+  subtitle: "Collect snacks. Dodge trays. Escape with dignity.",
+  width: 2400,
+  height: 1500,
+  duration: 75,
+  requiredSnacks: 12,
+  bonkLimit: 3,
+  start: { x: 190, y: 1260 },
+  return: { x: 342, y: 328 },
+  marker: { x: 330, y: 338, radius: 54 },
+  exit: { x: 2185, y: 1260, radius: 76 },
+  cookie: { x: 2050, y: 395, collected: false },
+  coffee: { x: 1180, y: 825, collected: false, respawn: 0 },
+  snacks: [
+    [315,1185],[505,1110],[700,1005],[925,1045],[1120,950],[1325,1030],
+    [1545,900],[1760,760],[1955,605],[1855,410],[1540,470],[1185,570]
+  ],
+  puddles: [
+    { x:760, y:1220, rx:82, ry:36, angle:.18 },
+    { x:1430, y:735, rx:92, ry:34, angle:-.22 }
+  ],
+  tables: [
+    { x:470, y:780, w:210, h:116 }, { x:760, y:690, w:210, h:116 },
+    { x:1070, y:685, w:210, h:116 }, { x:1370, y:610, w:210, h:116 },
+    { x:570, y:1035, w:190, h:104 }, { x:875, y:905, w:190, h:104 },
+    { x:1190, y:1115, w:210, h:112 }, { x:1530, y:1065, w:210, h:112 },
+    { x:1810, y:965, w:190, h:104 }
+  ],
+  counters: [
+    { x:260, y:210, w:560, h:130, label:"SNACK LINE" },
+    { x:940, y:205, w:420, h:130, label:"SOUP?" },
+    { x:1530, y:205, w:520, h:130, label:"COOKIE WATCH" },
+    { x:2145, y:520, w:135, h:470, label:"TRAY RETURN" }
+  ],
+  hazards: [
+    { type:"dcStudent", color:"#cf704d", speed:96, radius:24, segment:0, progress:.15, points:[[420,520],[1920,520],[1920,675],[420,675]] },
+    { type:"dcStudent", color:"#5d78a7", speed:82, radius:24, segment:0, progress:.55, points:[[620,1210],[1720,1210],[1720,985],[620,985]] },
+    { type:"dcStudent", color:"#e0a539", speed:88, radius:24, segment:0, progress:.3, points:[[320,890],[760,810],[1120,875],[1510,790],[1860,850]] },
+    { type:"tray", speed:210, radius:28, segment:0, progress:.1, points:[[2080,560],[2080,1020]] },
+    { type:"tray", speed:235, radius:28, segment:0, progress:.65, points:[[1320,430],[2140,430]] }
+  ]
+};
 const SOUND_SPRITES = {
   start: [0, 450],
   acorn: [530, 240],
@@ -157,14 +204,14 @@ let orientationGateEnabled = false;
 
 function newState() {
   return {
-    running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
+    mode: MODE_HUB, running: false, ended: false, paused: false, muted: false, timeLeft: GAME_SECONDS, score: 0, secrets: 0, combo:0, bestCombo:0, comboWindow:0, flash:0, shake:0, hintLife:0, landmarkPulse:0, finalScurry:false, goldenCaught:0, dodges:0, chapterIndex:0, presentationTime:0, introCamera:0, introCameraDuration:0,
     player: { x: 690, y: 560, vx:0, vy:0, r: 19, facing: 1, invulnerable: 0, bob: 0, spin: 0, secretDance: 0, moving:false, skeetersHero:{ scale:1, lift:0, rotate:-.12, glow:0 }, capeLaunch:{ burst:0, lift:0, capeScale:1, streak:0 } },
     camera: { x:690, y:560 },
     acorns: trailChapters.flatMap((chapter,chapterIndex)=>chapter.spots.map(([x,y],spotIndex)=>({x,y,collected:false,hidden:false,chapterIndex,spotIndex}))),
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null, powerupBag: [],
-    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, sbsGreetingPlayed:false, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, sbsGreetingPlayed:false, progress:loadZoneProgress(), zone:null, zonePrompt:null, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}],
     professorBoltz: { x:292, y:862, segment:0, progress:0, speed:24, dwellLeft:1.8, facing:-1, wave:0, route:[[292,862],[246,840],[192,826],[134,846],[103,884],[128,930],[204,948],[270,916],[292,862]] }
@@ -237,13 +284,19 @@ function update(dt) {
     state.particles = state.particles.filter(p => p.life > 0);
     return;
   }
-  state.elapsed += dt; state.timeLeft -= dt;
-  if (state.timeLeft <= 0) { state.timeLeft = 0; endGame(); updateHud(); return; }
-  if (state.elapsed >= state.nextAmbientAt) {
-    playSound("bird");
-    state.nextAmbientAt = state.elapsed + 10 + Math.random() * 9;
+  state.elapsed += dt;
+  if (state.mode === MODE_DINING_CENTER) {
+    state.zone.timeLeft = Math.max(0, state.zone.timeLeft - dt);
+    if (state.zone.timeLeft <= 0) failDiningCenterZone("Snack mission timed out.");
+  } else {
+    state.timeLeft -= dt;
+    if (state.timeLeft <= 0) { state.timeLeft = 0; endGame(); updateHud(); return; }
+    if (state.elapsed >= state.nextAmbientAt) {
+      playSound("bird");
+      state.nextAmbientAt = state.elapsed + 10 + Math.random() * 9;
+    }
+    if(state.timeLeft<=30&&!state.finalScurry){state.finalScurry=true;showToast("Final scurry! Thirty seconds left!");playSound("urgent");}
   }
-  if(state.timeLeft<=30&&!state.finalScurry){state.finalScurry=true;showToast("Final scurry! Thirty seconds left!");playSound("urgent");}
   state.comboWindow=Math.max(0,state.comboWindow-dt);
   if(!state.comboWindow)state.combo=0;
   state.flash=Math.max(0,state.flash-dt);
@@ -255,13 +308,19 @@ function update(dt) {
   const dy = clamp((keys.has("arrowdown") || keys.has("s") ? 1 : 0) - (keys.has("arrowup") || keys.has("w") ? 1 : 0)+joystick.y,-1,1);
   state.player.moving = Boolean(dx || dy);
   const mag = Math.hypot(dx, dy)||1;
-  const boost = Math.max(state.activePowerups.soup > 0 ? 1.48 : 1, state.activePowerups.skeetersBoost > 0 ? 1.32 : 1, state.activePowerups.cape > 0 ? CAPE_SPEED_MULTIPLIER : 1);
+  const coffeeBoost = state.zone?.coffeeBoost > 0 ? 1.34 : 1;
+  const boost = Math.max(state.activePowerups.soup > 0 ? 1.48 : 1, state.activePowerups.skeetersBoost > 0 ? 1.32 : 1, state.activePowerups.cape > 0 ? CAPE_SPEED_MULTIPLIER : 1, coffeeBoost);
   const speed = PLAYER_SPEED * boost;
   const targetVx=dx/mag*speed,targetVy=dy/mag*speed;
   const ease=1-Math.exp(-(dx||dy?13:18)*dt);
+  const previousPlayerX=state.player.x,previousPlayerY=state.player.y;
   state.player.vx+=(targetVx-state.player.vx)*ease;state.player.vy+=(targetVy-state.player.vy)*ease;
-  state.player.x=clamp(state.player.x+state.player.vx*dt,28,WORLD.width-28);state.player.y=clamp(state.player.y+state.player.vy*dt,28,WORLD.height-28);
-  updateMobileCamera(dt);
+  const world=getCurrentWorld();
+  state.player.x=clamp(state.player.x+state.player.vx*dt,28,world.width-28);state.player.y=clamp(state.player.y+state.player.vy*dt,28,world.height-28);
+  if(state.mode === MODE_DINING_CENTER && isDiningCenterBlocked(state.player)){
+    state.player.x=previousPlayerX;state.player.y=previousPlayerY;state.player.vx*=.18;state.player.vy*=.18;
+  }
+  updateCamera(dt);
   if(Math.abs(state.player.vx)>.5)state.player.facing=Math.sign(state.player.vx);
   if(Math.hypot(state.player.vx,state.player.vy)>8)state.player.bob+=dt*13;
   state.player.invulnerable = Math.max(0, state.player.invulnerable - dt);
@@ -276,6 +335,15 @@ function update(dt) {
   Object.keys(state.activePowerups).forEach(id => state.activePowerups[id] = Math.max(0, state.activePowerups[id] - dt));
   updateCapeFlightAudio();
   updateSecretRevealAnimations();
+
+  if (state.mode === MODE_DINING_CENTER) {
+    updateDiningCenterZone(dt);
+    updateTransientEffects(dt);
+    updateHud();
+    return;
+  }
+
+  updateZoneEntryPrompt();
 
   if (!hasSpecialEvent() && state.elapsed >= state.nextGoldenAt) spawnGoldenAcorn();
   if (state.golden) {
@@ -318,6 +386,25 @@ function update(dt) {
       }
     }
   }
+  updateTransientEffects(dt);
+  updateHud();
+}
+
+function getCurrentWorld() {
+  return state?.mode === MODE_DINING_CENTER ? DINING_CENTER_ZONE : WORLD;
+}
+
+function updateCamera(dt) {
+  if(state.mode !== MODE_DINING_CENTER){
+    updateMobileCamera(dt);
+    return;
+  }
+  const ease=1-Math.exp(-8*dt);
+  state.camera.x+=(state.player.x-state.camera.x)*ease;
+  state.camera.y+=(state.player.y-state.camera.y)*ease;
+}
+
+function updateTransientEffects(dt) {
   state.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
   state.particles = state.particles.filter(p => p.life > 0);
   state.reactions.forEach(r => r.life -= dt);
@@ -326,7 +413,196 @@ function update(dt) {
   state.scorePops = state.scorePops.filter(p => p.life > 0);
   state.celebrations.forEach(c => c.life -= dt);
   state.celebrations = state.celebrations.filter(c => c.life > 0);
+}
+
+function createDiningCenterZoneState() {
+  return {
+    id: DINING_CENTER_ZONE.id,
+    timeLeft: DINING_CENTER_ZONE.duration,
+    snacksCollected: 0,
+    cookieCollected: false,
+    bonks: 0,
+    coffeeBoost: 0,
+    result: null,
+    snacks: DINING_CENTER_ZONE.snacks.map(([x,y],index)=>({ x, y, index, collected:false })),
+    cookie: { ...DINING_CENTER_ZONE.cookie, collected:false },
+    coffee: { ...DINING_CENTER_ZONE.coffee, collected:false, respawn:0 },
+    hazards: DINING_CENTER_ZONE.hazards.map(h=>({ ...h, points:h.points.map(([x,y])=>[x,y]) })),
+    returnTo: { x: state.player.x, y: state.player.y }
+  };
+}
+
+function enterDiningCenterZone() {
+  if(state.mode !== MODE_HUB || !state.running)return;
+  const muted=state.muted;
+  state.mode=MODE_DINING_CENTER;
+  state.zone=createDiningCenterZoneState();
+  state.player.x=DINING_CENTER_ZONE.start.x;state.player.y=DINING_CENTER_ZONE.start.y;
+  state.player.vx=0;state.player.vy=0;state.player.invulnerable=.8;state.player.spin=0;
+  state.camera.x=state.player.x;state.camera.y=state.player.y;
+  state.golden=null;state.powerup=null;state.spills=[];
+  state.activePowerups.soup=0;state.activePowerups.skeetersBoost=0;state.activePowerups.cape=0;
+  stopCapeFlightAudio(.2);
+  state.muted=muted;
+  showToast(DINING_CENTER_ZONE.subtitle);
+  document.getElementById("missionTitle").textContent=DINING_CENTER_ZONE.name;
+  document.getElementById("missionText").textContent="Collect 12 snack acorns, grab the DC Cookie, then reach the glowing exit.";
+  playSound("powerup");
+}
+
+function returnToHubFromDiningCenter(message) {
+  const completed=state.zone?.result === "complete";
+  const returnTo=state.zone?.returnTo || DINING_CENTER_ZONE.return;
+  if(completed){
+    state.progress.diningCenter.completed=true;
+    state.progress.diningCenter.snacks=Math.max(state.progress.diningCenter.snacks, state.zone.snacksCollected);
+    const finishTime=Math.max(0, DINING_CENTER_ZONE.duration - state.zone.timeLeft);
+    state.progress.diningCenter.bestTime=state.progress.diningCenter.bestTime == null ? finishTime : Math.min(state.progress.diningCenter.bestTime, finishTime);
+    saveZoneProgress();
+  }
+  state.mode=MODE_HUB;
+  state.zone=null;
+  state.player.x=returnTo.x;state.player.y=returnTo.y;
+  state.player.vx=0;state.player.vy=0;state.player.invulnerable=1;
+  state.camera.x=state.player.x;state.camera.y=state.player.y;
+  state.hintLife=5;
+  showDefaultNotebook();
+  showToast(message);
   updateHud();
+}
+
+function completeDiningCenterZone() {
+  if(state.zone?.result)return;
+  state.zone.result="complete";
+  state.score+=5;
+  state.flash=.55;
+  spawnParticles(state.player.x,state.player.y,"#ffe38a");
+  addScorePop(state.player.x,state.player.y-34,"DC CLEARED! +5","#fff1bd",24);
+  state.reactions.push({ x:state.player.x, y:state.player.y-44, life:1.2, text:"SUSPICIOUSLY CAFFEINATED!", color:"#fff1bd", stars:true });
+  playSound("finish");
+  setTimeout(()=>returnToHubFromDiningCenter("DC Dash cleared. SBS is suspiciously caffeinated."),900);
+}
+
+function failDiningCenterZone(message) {
+  if(state.zone?.result)return;
+  state.zone.result="fail";
+  state.player.invulnerable=1;
+  state.shake=reducedMotionQuery.matches?0:.24;
+  showToast(message || "Snack mission compromised.");
+  playSound("wobble");
+  setTimeout(()=>returnToHubFromDiningCenter("SBS retreated from the DC. The snacks remain under watch."),900);
+}
+
+function updateDiningCenterZone(dt) {
+  if(!state.zone || state.zone.result)return;
+  state.zone.coffeeBoost=Math.max(0,state.zone.coffeeBoost-dt);
+  if(state.zone.coffee.respawn>0){
+    state.zone.coffee.respawn=Math.max(0,state.zone.coffee.respawn-dt);
+    if(state.zone.coffee.respawn===0)state.zone.coffee.collected=false;
+  }
+  state.zone.hazards.forEach(h=>moveDiningCenterHazard(h,dt));
+  state.zone.snacks.forEach(snack=>{
+    if(!snack.collected && distance(state.player,snack)<34)collectDiningCenterSnack(snack);
+  });
+  if(!state.zone.cookie.collected && distance(state.player,state.zone.cookie)<42)collectDiningCenterCookie();
+  if(!state.zone.coffee.collected && distance(state.player,state.zone.coffee)<42)collectDiningCenterCoffee();
+  const puddle=DINING_CENTER_ZONE.puddles.find(p=>isInEllipse(state.player,p));
+  if(puddle){
+    state.player.vx*=1.02;state.player.vy*=1.02;
+    if(Math.random()<dt*3)spawnParticles(state.player.x,state.player.y,"#c7e6ff");
+  }
+  if(!state.player.invulnerable){
+    const hit=state.zone.hazards.find(h=>distance(state.player,h)<state.player.r+h.radius);
+    if(hit)bonkDiningCenterHazard(hit);
+  }
+  if(state.zone.cookieCollected && state.zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks && distance(state.player,DINING_CENTER_ZONE.exit)<DINING_CENTER_ZONE.exit.radius){
+    completeDiningCenterZone();
+  }
+}
+
+function moveDiningCenterHazard(h,dt) {
+  const from=h.points[h.segment],to=h.points[(h.segment+1)%h.points.length];
+  const len=Math.hypot(to[0]-from[0],to[1]-from[1])||1;
+  h.progress+=h.speed*dt/len;
+  if(h.progress>=1){
+    h.progress-=1;
+    h.segment=(h.segment+1)%h.points.length;
+  }
+  const a=h.points[h.segment],b=h.points[(h.segment+1)%h.points.length];
+  h.x=a[0]+(b[0]-a[0])*h.progress;h.y=a[1]+(b[1]-a[1])*h.progress;
+  h.angle=Math.atan2(b[1]-a[1],b[0]-a[0]);
+}
+
+function collectDiningCenterSnack(snack) {
+  snack.collected=true;
+  state.zone.snacksCollected++;
+  state.score++;
+  extendCombo();
+  spawnParticles(snack.x,snack.y,"#f4c65f");
+  addScorePop(snack.x,snack.y,`SNACK ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks}`,"#fff4b4",16);
+  playSound("acorn");
+}
+
+function collectDiningCenterCookie() {
+  state.zone.cookie.collected=true;
+  state.zone.cookieCollected=true;
+  state.score+=3;
+  state.flash=.35;
+  spawnParticles(state.zone.cookie.x,state.zone.cookie.y,"#ffe38a");
+  addScorePop(state.zone.cookie.x,state.zone.cookie.y,"DC COOKIE! +3","#fff1bd",23);
+  showToast("Legendary DC Cookie acquired. Now find the exit!");
+  playSound("golden");
+}
+
+function collectDiningCenterCoffee() {
+  state.zone.coffee.collected=true;
+  state.zone.coffee.respawn=18;
+  state.zone.coffeeBoost=5.5;
+  state.player.invulnerable=Math.max(state.player.invulnerable,.35);
+  spawnParticles(state.zone.coffee.x,state.zone.coffee.y,"#d4d07d");
+  addScorePop(state.zone.coffee.x,state.zone.coffee.y,"CAFFEINATED!","#fff0a8",20);
+  showToast("Caffeinated Squirrel Mode activated.");
+  playSound("powerup");
+}
+
+function bonkDiningCenterHazard(hazard) {
+  state.zone.bonks++;
+  state.player.invulnerable=1.15;
+  state.player.spin=.55;
+  state.combo=0;state.comboWindow=0;
+  state.shake=reducedMotionQuery.matches?0:.2;
+  spawnParticles(state.player.x,state.player.y,"#ffffff");
+  state.reactions.push({ x:state.player.x, y:state.player.y-30, life:1, text:hazard.type==="tray"?"TRAY TRAFFIC!":"Sorry, SBS!", color:"#fff5da", stars:false });
+  showToast(`Tray traffic bonk ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}.`);
+  playSound("bump");
+  if(state.zone.bonks>=DINING_CENTER_ZONE.bonkLimit)failDiningCenterZone("Tray traffic has defeated the squirrel.");
+}
+
+function isDiningCenterBlocked(point) {
+  const blockers=[...DINING_CENTER_ZONE.tables,...DINING_CENTER_ZONE.counters];
+  return blockers.some(rect=>circleRectOverlap(point.x,point.y,state.player.r,rect));
+}
+
+function circleRectOverlap(cx,cy,r,rect) {
+  const closestX=clamp(cx,rect.x,rect.x+rect.w),closestY=clamp(cy,rect.y,rect.y+rect.h);
+  return Math.hypot(cx-closestX,cy-closestY)<r;
+}
+
+function isInEllipse(point,puddle) {
+  const cos=Math.cos(-(puddle.angle||0)),sin=Math.sin(-(puddle.angle||0));
+  const dx=point.x-puddle.x,dy=point.y-puddle.y;
+  const x=dx*cos-dy*sin,y=dx*sin+dy*cos;
+  return (x*x)/(puddle.rx*puddle.rx)+(y*y)/(puddle.ry*puddle.ry)<=1;
+}
+
+function updateZoneEntryPrompt() {
+  const marker=DINING_CENTER_ZONE.marker;
+  const near=distance(state.player,marker)<marker.radius+28;
+  state.zonePrompt=near ? MODE_DINING_CENTER : null;
+  if(near && (keys.has(" ") || keys.has("enter"))){
+    keys.delete(" ");keys.delete("enter");
+    enterDiningCenterZone();
+  }
 }
 
 function moveHazard(h, dt) {
@@ -412,6 +688,11 @@ function busCollisionGap(bus) {
 }
 
 function showDefaultNotebook() {
+  if(state.progress?.diningCenter?.completed){
+    document.getElementById("missionTitle").textContent="DC Dash cleared";
+    document.getElementById("missionText").textContent="The Dining Center snack heist is complete. Keep roaming campus or chase the next acorn trail.";
+    return;
+  }
   const chapter=trailChapters[state.chapterIndex];
   document.getElementById("missionTitle").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
   document.getElementById("missionText").textContent=chapter?`Follow the glowing acorn trail along ${chapter.name}.`:"Sniff around landmark signs for any secret stashes you missed.";
@@ -644,22 +925,27 @@ function draw() {
   ctx.save();
   applyOpeningCamera();
   if(state.shake){const strength=state.shake*14;ctx.translate((Math.random()-.5)*strength,(Math.random()-.5)*strength);}
-  drawCampus();
-  drawAtmosphere();
-  state.acorns.forEach(drawAcorn);
-  state.hidden.forEach(drawHiddenAcorn);
-  state.spills.forEach(drawSpilledAcorn);
-  if (state.golden) drawGoldenAcorn(state.golden);
-  if (state.powerup) drawPowerup(state.powerup);
-  state.hazards.forEach(drawHazard);
-  drawPlayer();
-  state.particles.forEach(drawParticle);
-  state.reactions.forEach(drawReaction);
-  state.scorePops.forEach(drawScorePop);
-  state.celebrations.forEach(drawCelebration);
-  if (state.golden) drawGoldenPointer(state.golden);
-  drawPowerupStatus();
-  drawGuidance();
+  if(state.mode === MODE_DINING_CENTER){
+    drawDiningCenterZone();
+  } else {
+    drawCampus();
+    drawAtmosphere();
+    state.acorns.forEach(drawAcorn);
+    state.hidden.forEach(drawHiddenAcorn);
+    state.spills.forEach(drawSpilledAcorn);
+    if (state.golden) drawGoldenAcorn(state.golden);
+    if (state.powerup) drawPowerup(state.powerup);
+    drawZoneMarkers();
+    state.hazards.forEach(drawHazard);
+    drawPlayer();
+    state.particles.forEach(drawParticle);
+    state.reactions.forEach(drawReaction);
+    state.scorePops.forEach(drawScorePop);
+    state.celebrations.forEach(drawCelebration);
+    if (state.golden) drawGoldenPointer(state.golden);
+    drawPowerupStatus();
+    drawGuidance();
+  }
   ctx.restore();
   if(state.flash){ctx.save();ctx.globalAlpha=state.flash*.42;ctx.fillStyle="#fff1a3";ctx.fillRect(0,0,WORLD.width,WORLD.height);ctx.restore();}
   if(state.landmarkPulse){ctx.save();ctx.globalAlpha=state.landmarkPulse*.14;ctx.fillStyle="#e6ffae";ctx.fillRect(0,0,WORLD.width,WORLD.height);ctx.restore();}
@@ -667,6 +953,7 @@ function draw() {
 }
 
 function applyOpeningCamera() {
+  if(state.mode === MODE_DINING_CENTER){applyDiningCenterCamera();return;}
   if(!state.introCamera){applyMobileCamera();return;}
   const progress=1-state.introCamera/state.introCameraDuration;
   const eased=1-Math.pow(1-progress,3);
@@ -702,11 +989,17 @@ function applyMobileCamera() {
 
 function applyWorldCamera(x,y,zoom) {
   const halfW=canvas.width/(2*zoom),halfH=canvas.height/(2*zoom);
-  const focusX=clamp(x,halfW,WORLD.width-halfW);
-  const focusY=clamp(y,halfH,WORLD.height-halfH);
+  const world=getCurrentWorld();
+  const focusX=clamp(x,halfW,world.width-halfW);
+  const focusY=clamp(y,halfH,world.height-halfH);
   ctx.translate(canvas.width/2,canvas.height/2);
   ctx.scale(zoom,zoom);
   ctx.translate(-focusX,-focusY);
+}
+
+function applyDiningCenterCamera() {
+  const zoom=isMobileView()?Math.max(.84,canvas.width/DINING_CENTER_ZONE.width,canvas.height/DINING_CENTER_ZONE.height):1;
+  applyWorldCamera(state.camera.x,state.camera.y,zoom);
 }
 
 function resizeCanvasForViewport() {
@@ -736,6 +1029,165 @@ function refreshFullscreenButton() {
 function refreshOrientationGate() {
   const portrait=isMobileView()&&window.innerHeight>window.innerWidth;
   document.getElementById("orientationOverlay").classList.toggle("show",orientationGateEnabled&&portrait&&!portraitBypass);
+}
+
+function drawZoneMarkers() {
+  const marker=DINING_CENTER_ZONE.marker,completed=state.progress.diningCenter.completed;
+  const near=distance(state.player,marker)<marker.radius+24;
+  const pulse=Math.sin(state.elapsed*5)*.5+.5;
+  ctx.save();
+  ctx.globalAlpha=.82;
+  ctx.strokeStyle=completed?"#fff1bd":"#ffe56b";
+  ctx.lineWidth=5+pulse*3;
+  ctx.beginPath();ctx.arc(marker.x,marker.y,marker.radius+pulse*8,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=completed?"rgba(255,241,189,.28)":"rgba(255,229,107,.24)";
+  ctx.beginPath();ctx.arc(marker.x,marker.y,marker.radius,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fffdf6";roundRect(marker.x-77,marker.y-78,154,38,14);ctx.fill();
+  ctx.strokeStyle="rgba(49,84,64,.35)";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle="#315440";ctx.font="900 12px Nunito";ctx.textAlign="center";
+  ctx.fillText(completed?"DC DASH CLEARED":"DINING CENTER DASH",marker.x,marker.y-54);
+  if(near){
+    ctx.fillStyle="#173c2d";roundRect(marker.x-128,marker.y+62,256,42,18);ctx.fill();
+    ctx.fillStyle="#fff7d8";ctx.font="900 14px Nunito";ctx.fillText("Press Space / Enter to raid the DC",marker.x,marker.y+88);
+  }
+  ctx.textAlign="left";ctx.restore();
+}
+
+function drawDiningCenterZone() {
+  drawDiningCenterRoom();
+  DINING_CENTER_ZONE.counters.forEach(drawDiningCounter);
+  DINING_CENTER_ZONE.tables.forEach(drawDiningTable);
+  DINING_CENTER_ZONE.puddles.forEach(drawDiningPuddle);
+  drawDiningExit();
+  state.zone.snacks.forEach(drawDiningSnack);
+  drawDiningCoffee(state.zone.coffee);
+  drawDiningCookie(state.zone.cookie);
+  state.zone.hazards.forEach(drawDiningHazard);
+  drawPlayer();
+  state.particles.forEach(drawParticle);
+  state.reactions.forEach(drawReaction);
+  state.scorePops.forEach(drawScorePop);
+  drawDiningCenterObjective();
+}
+
+function drawDiningCenterRoom() {
+  ctx.fillStyle="#dcc7a5";ctx.fillRect(0,0,DINING_CENTER_ZONE.width,DINING_CENTER_ZONE.height);
+  ctx.fillStyle="rgba(255,253,246,.18)";
+  for(let x=0;x<DINING_CENTER_ZONE.width;x+=80)ctx.fillRect(x,0,4,DINING_CENTER_ZONE.height);
+  for(let y=0;y<DINING_CENTER_ZONE.height;y+=80)ctx.fillRect(0,y,DINING_CENTER_ZONE.width,4);
+  ctx.fillStyle="#c9ad84";ctx.fillRect(0,0,DINING_CENTER_ZONE.width,62);ctx.fillRect(0,DINING_CENTER_ZONE.height-62,DINING_CENTER_ZONE.width,62);
+  ctx.fillStyle="#a6815e";ctx.fillRect(0,0,58,DINING_CENTER_ZONE.height);ctx.fillRect(DINING_CENTER_ZONE.width-58,0,58,DINING_CENTER_ZONE.height);
+  ctx.fillStyle="rgba(71,52,36,.13)";
+  [[180,1340,360,42],[2050,1350,315,42],[120,95,440,32]].forEach(([x,y,w,h])=>{roundRect(x,y,w,h,12);ctx.fill();});
+  ctx.fillStyle="#6a0000";ctx.font="900 28px Fraunces, Georgia";ctx.textAlign="left";ctx.fillText("DINING CENTER DASH",110,122);
+  ctx.fillStyle="#5f4a35";ctx.font="900 15px Nunito";ctx.fillText("Snack mission in progress",112,150);
+}
+
+function drawDiningCounter(counter) {
+  ctx.save();
+  ctx.fillStyle="rgba(56,42,31,.22)";roundRect(counter.x+8,counter.y+10,counter.w,counter.h,10);ctx.fill();
+  ctx.fillStyle="#a47d55";roundRect(counter.x,counter.y,counter.w,counter.h,10);ctx.fill();
+  ctx.strokeStyle="#704f35";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#f2dfbd";roundRect(counter.x+16,counter.y+18,counter.w-32,38,8);ctx.fill();
+  ctx.fillStyle="#315440";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText(counter.label,counter.x+counter.w/2,counter.y+43);
+  ctx.fillStyle="#8fb36d";for(let x=counter.x+42;x<counter.x+counter.w-30;x+=78){ctx.beginPath();ctx.arc(x,counter.y+88,13,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+}
+
+function drawDiningTable(table) {
+  ctx.save();
+  ctx.fillStyle="rgba(56,42,31,.2)";roundRect(table.x+8,table.y+9,table.w,table.h,16);ctx.fill();
+  ctx.fillStyle="#8f684d";roundRect(table.x,table.y,table.w,table.h,14);ctx.fill();
+  ctx.strokeStyle="#5e3e2c";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#b8895f";roundRect(table.x+16,table.y+15,table.w-32,table.h-30,10);ctx.fill();
+  ctx.fillStyle="rgba(255,245,214,.5)";
+  [[table.x+32,table.y+28],[table.x+table.w-44,table.y+table.h-32]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();});
+  ctx.restore();
+}
+
+function drawDiningPuddle(puddle) {
+  ctx.save();ctx.translate(puddle.x,puddle.y);ctx.rotate(puddle.angle||0);
+  ctx.fillStyle="rgba(150,198,220,.48)";ctx.beginPath();ctx.ellipse(0,0,puddle.rx,puddle.ry,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.45)";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,puddle.rx-12,puddle.ry-8,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+
+function drawDiningSnack(snack) {
+  if(snack.collected)return;
+  drawAcorn({ ...snack, chapterIndex:0, collected:false });
+}
+
+function drawDiningCookie(cookie) {
+  if(cookie.collected)return;
+  const pulse=1+Math.sin(state.elapsed*6)*.08;
+  ctx.save();ctx.translate(cookie.x,cookie.y);ctx.scale(pulse,pulse);
+  ctx.shadowColor="#ffe38a";ctx.shadowBlur=22;
+  ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(0,0,28,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;ctx.strokeStyle="#7b4b2d";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#5a3525";[[-9,-8],[8,-3],[-2,10],[13,12]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle="#fff8d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("DC",0,4);ctx.restore();
+}
+
+function drawDiningCoffee(coffee) {
+  if(coffee.collected)return;
+  ctx.save();ctx.translate(coffee.x,coffee.y+Math.sin(state.elapsed*5)*3);
+  ctx.shadowColor="#d4d07d";ctx.shadowBlur=18;
+  ctx.fillStyle="#fff4d2";roundRect(-18,-20,36,34,8);ctx.fill();
+  ctx.strokeStyle="#7a5132";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#6b3d25";ctx.fillRect(-12,-13,24,9);
+  ctx.strokeStyle="#fff4d2";ctx.lineWidth=4;ctx.beginPath();ctx.arc(20,-4,8,-Math.PI/2,Math.PI/2);ctx.stroke();
+  ctx.shadowBlur=0;ctx.fillStyle="#315440";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("JAVA",0,8);ctx.restore();
+}
+
+function drawDiningExit() {
+  const exit=DINING_CENTER_ZONE.exit,ready=state.zone.cookieCollected&&state.zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks;
+  const pulse=Math.sin(state.elapsed*5)*.5+.5;
+  ctx.save();
+  ctx.strokeStyle=ready?"#caff75":"rgba(255,253,246,.6)";
+  ctx.lineWidth=ready?6+pulse*4:4;
+  ctx.beginPath();ctx.arc(exit.x,exit.y,exit.radius+pulse*8,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=ready?"rgba(202,255,117,.26)":"rgba(255,253,246,.18)";
+  ctx.beginPath();ctx.arc(exit.x,exit.y,exit.radius,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#315440";roundRect(exit.x-72,exit.y-18,144,36,16);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText(ready?"ESCAPE!":"EXIT LOCKED",exit.x,exit.y+5);
+  ctx.restore();
+}
+
+function drawDiningHazard(h) {
+  ctx.save();ctx.translate(h.x,h.y);ctx.rotate(h.angle||0);
+  if(h.type==="tray")drawSlidingTrayHazard();
+  else drawDiningStudentHazard(h);
+  ctx.restore();
+}
+
+function drawDiningStudentHazard(h) {
+  ctx.save();ctx.rotate(-(h.angle||0));
+  ctx.fillStyle="rgba(24,37,31,.22)";ctx.beginPath();ctx.ellipse(0,23,20,8,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=h.color;roundRect(-14,-9,28,32,8);ctx.fill();ctx.strokeStyle="#263930";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle="#efc3a1";ctx.beginPath();ctx.arc(0,-20,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#503629";ctx.beginPath();ctx.arc(0,-23,10,Math.PI,0);ctx.fill();
+  ctx.fillStyle="#d7d2c4";roundRect(-28,-2,56,22,5);ctx.fill();ctx.strokeStyle="#7a7f76";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#8fb36d";roundRect(-18,3,15,10,3);ctx.fill();ctx.fillStyle="#f6f0dc";roundRect(5,3,16,10,3);ctx.fill();
+  ctx.restore();
+}
+
+function drawSlidingTrayHazard() {
+  ctx.fillStyle="rgba(24,37,31,.24)";roundRect(-38,-16,76,32,8);ctx.fill();
+  ctx.fillStyle="#d7d2c4";roundRect(-34,-20,68,40,7);ctx.fill();
+  ctx.strokeStyle="#7a7f76";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#f6f0dc";roundRect(-22,-10,20,14,3);ctx.fill();
+  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(15,7,7,0,Math.PI*2);ctx.fill();
+}
+
+function drawDiningCenterObjective() {
+  const x=state.camera.x-canvas.width/2+26,y=state.camera.y-canvas.height/2+24;
+  ctx.save();
+  ctx.fillStyle="rgba(255,253,246,.92)";roundRect(x,y,330,86,12);ctx.fill();
+  ctx.strokeStyle="rgba(49,84,64,.28)";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle="#6a0000";ctx.font="900 14px Nunito";ctx.fillText("Dining Center Dash",x+18,y+26);
+  ctx.fillStyle="#315440";ctx.font="900 18px Nunito";ctx.fillText(`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks} · Bonks ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}`,x+18,y+52);
+  ctx.fillStyle=state.zone.cookieCollected?"#315440":"#8a6b3f";ctx.font="900 13px Nunito";ctx.fillText(state.zone.cookieCollected?"Cookie secured. Find the exit.":"Grab the legendary DC Cookie.",x+18,y+73);
+  ctx.restore();
 }
 
 function drawCampus() {
@@ -1578,6 +2030,7 @@ function getRank() {
 
 function getBestMoment() {
   if(state.secrets===landmarks.length)return "found every campus secret.";
+  if(state.progress?.diningCenter?.completed)return "cleared the Dining Center snack heist.";
   if(state.capeFlights>0)return "sent Super SBS flying over campus trouble.";
   if(state.skeetersBlocks>0)return "saved the stash with a Skeeter's pizza box.";
   if(state.skeetersDeliveries>0)return "completed a heroic Skeeter's delivery.";
@@ -1596,6 +2049,23 @@ function renderLandmarkBadges() {
 
 function loadPersonalBests() {
   try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||{score:0,combo:0,secrets:0};}catch{return {score:0,combo:0,secrets:0};}
+}
+
+function loadZoneProgress() {
+  const fallback={ diningCenter:{ completed:false, bestTime:null, snacks:0 } };
+  try{
+    const saved=JSON.parse(localStorage.getItem(ZONE_PROGRESS_KEY));
+    return {
+      diningCenter: {
+        ...fallback.diningCenter,
+        ...(saved?.diningCenter || {})
+      }
+    };
+  }catch{return fallback;}
+}
+
+function saveZoneProgress() {
+  try{localStorage.setItem(ZONE_PROGRESS_KEY,JSON.stringify(state.progress));}catch{}
 }
 
 function savePersonalBests() {
@@ -1732,11 +2202,18 @@ function resumeGame() {
 }
 
 function updateHud(){
-  document.getElementById("score").textContent=state.score;document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
-  const chapter=trailChapters[state.chapterIndex];document.getElementById("mobileDestination").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
+  document.getElementById("score").textContent=state.score;
+  if(state.mode === MODE_DINING_CENTER && state.zone){
+    document.getElementById("tourKicker").textContent=`DC snacks ${state.zone.snacksCollected} / ${DINING_CENTER_ZONE.requiredSnacks}`;
+    document.getElementById("mobileDestination").textContent=state.zone.cookieCollected?"Reach the DC exit":"Find the DC Cookie";
+  } else {
+    document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
+    const chapter=trailChapters[state.chapterIndex];document.getElementById("mobileDestination").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
+  }
   document.getElementById("combo").textContent=state.combo;document.getElementById("comboCard").classList.toggle("hot",state.combo>=3);
-  const s=Math.ceil(state.timeLeft);document.getElementById("timer").textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
-  document.querySelector(".timer-card").classList.toggle("urgent",state.running&&state.timeLeft<=30);
+  const timerValue=state.mode === MODE_DINING_CENTER && state.zone ? state.zone.timeLeft : state.timeLeft;
+  const s=Math.ceil(timerValue);document.getElementById("timer").textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  document.querySelector(".timer-card").classList.toggle("urgent",state.running&&timerValue<=20);
 }
 function showToast(text){const el=document.getElementById("toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1800);}
 function initGameAudio() {
@@ -1966,6 +2443,7 @@ function loadSpriteAssets() {
 
 window.addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+canvas.addEventListener("click",()=>{if(state?.zonePrompt===MODE_DINING_CENTER)enterDiningCenterZone();});
 const joystickEl=document.getElementById("joystick");
 joystickEl.addEventListener("pointerdown",event=>{event.preventDefault();joystick.pointerId=event.pointerId;joystickEl.setPointerCapture(event.pointerId);updateJoystick(event);});
 joystickEl.addEventListener("pointermove",event=>{if(event.pointerId===joystick.pointerId)updateJoystick(event);});

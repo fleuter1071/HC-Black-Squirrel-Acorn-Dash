@@ -471,3 +471,51 @@ Session notes will be appended here as the game evolves.
 - Next steps
   - Use the sound test panel workflow to identify which clips should be softened, removed, or replaced.
   - If keeping Howler long-term, consider adding a small user-facing volume preference in addition to mute.
+
+## 2026-06-14 - Campus hub and zoomed-in zone product direction
+
+- Date/time
+  - 2026-06-14, America/New_York.
+- Feature name, work name, description, and value provided
+  - Ingested a new product direction for evolving SBS from a single compressed campus-map arcade screen into a hybrid playable campus hub plus zoomed-in campus episodes.
+  - The current full-campus Haverford map should remain playable, but its role should shift toward a charming overworld: light acorns, light hazards, nostalgia, orientation, and entry points.
+  - Deeper gameplay should move into separate larger campus zones so SBS has more room to run, dodge, collect, and experience place-specific jokes.
+  - First MVP zone should be `Founders Green Acorn Dash`, with a larger-than-viewport playfield, camera-follow behavior, acorns, obstacles, timer, win/fail conditions, and return-to-hub flow.
+- Files changed
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - No implementation change yet.
+  - Future architecture should support at least two gameplay layers:
+    - `MainCampusHub`: playable campus overworld with lower density and glowing zone-entry markers.
+    - Drill-down zone scenes/levels, starting with Founders Green.
+  - Progress state should track total acorns, completed zones, unlocked zones, hidden nostalgia pickups, best times, badges/ranks, and return position on the hub.
+  - If the project later migrates to Phaser, suggested scene names include `BootScene`, `PreloadScene`, `MainCampusHubScene`, `FoundersGreenScene`, `DiningCenterScene`, `LloydNightScene`, `LibraryQuietScene`, `BlueBusCrossingScene`, `ArboretumScene`, and `UIScene`.
+- Assumptions
+  - The game should remain a standalone static web app unless a future architecture decision explicitly changes that.
+  - Geographic accuracy should remain secondary to alumni-recognizable, emotionally accurate campus memories.
+  - The current canvas implementation can be evolved incrementally before deciding whether a Phaser migration is worth the complexity.
+- Known limitations
+  - This is product/design direction only; no hub/zone code has been implemented from this entry.
+  - The current game still uses the existing single main canvas game loop and full-campus map behavior.
+  - Building all zones at once would be too large; the recommended approach is one fun zone first, then expand.
+- Key learnings that you can bring with you to future sessions
+  - The claustrophobia problem should be solved by changing the campus map's job, not discarding it.
+  - The hub creates continuity and nostalgia; zoomed-in zones create breathing room and richer mechanics.
+  - Each campus zone should have a distinct gameplay identity, not just a different background:
+    - Founders Green = classic acorn dash.
+    - Dining Center = food, coffee, trays, slippery chaos.
+    - Lloyd = party debris, red cups, pulsing nightlife energy.
+    - Library = quiet stealth/noise meter.
+    - Blue Bus Crossing = timing and route hazards.
+    - Arboretum = exploration, hidden acorns, natural obstacles.
+  - A strong MVP should prove the hub-to-zone-to-hub loop before adding more locations.
+- Remaining TODOs
+  - Reduce main hub density so it feels less cramped.
+  - Add 2-3 glowing entry markers on the hub, starting with Founders Green.
+  - Build the first zoomed-in Founders Green zone.
+  - Add progress state for completed zones, unlocked areas, and total acorns.
+  - Add a return-to-hub flow that places SBS near the same campus marker after zone completion.
+- Next steps
+  - Plan the first implementation slice around `Founders Green Acorn Dash`.
+  - Keep the first slice small: one entry marker, one zone, one completion condition, one return flow.
+  - Decide whether to extend the current canvas architecture first or create a migration plan toward Phaser after validating the hub-zone loop.
