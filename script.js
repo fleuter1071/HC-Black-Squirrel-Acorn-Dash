@@ -447,6 +447,7 @@ function enterDiningCenterZone() {
   showToast(DINING_CENTER_ZONE.subtitle);
   document.getElementById("missionTitle").textContent=DINING_CENTER_ZONE.name;
   document.getElementById("missionText").textContent="Collect 12 snack acorns, grab the DC Cookie, then reach the glowing exit.";
+  document.getElementById("mobileZoneButton").classList.remove("show");
   playSound("powerup");
 }
 
@@ -1047,8 +1048,9 @@ function drawZoneMarkers() {
   ctx.fillStyle="#315440";ctx.font="900 12px Nunito";ctx.textAlign="center";
   ctx.fillText(completed?"DC DASH CLEARED":"DINING CENTER DASH",marker.x,marker.y-54);
   if(near){
+    const prompt=isMobileView()?"Tap Raid DC":"Press Space / Enter to raid the DC";
     ctx.fillStyle="#173c2d";roundRect(marker.x-128,marker.y+62,256,42,18);ctx.fill();
-    ctx.fillStyle="#fff7d8";ctx.font="900 14px Nunito";ctx.fillText("Press Space / Enter to raid the DC",marker.x,marker.y+88);
+    ctx.fillStyle="#fff7d8";ctx.font="900 14px Nunito";ctx.fillText(prompt,marker.x,marker.y+88);
   }
   ctx.textAlign="left";ctx.restore();
 }
@@ -2203,6 +2205,8 @@ function resumeGame() {
 
 function updateHud(){
   document.getElementById("score").textContent=state.score;
+  const mobileZoneButton=document.getElementById("mobileZoneButton");
+  mobileZoneButton.classList.toggle("show",isMobileView()&&state.running&&state.mode===MODE_HUB&&state.zonePrompt===MODE_DINING_CENTER);
   if(state.mode === MODE_DINING_CENTER && state.zone){
     document.getElementById("tourKicker").textContent=`DC snacks ${state.zone.snacksCollected} / ${DINING_CENTER_ZONE.requiredSnacks}`;
     document.getElementById("mobileDestination").textContent=state.zone.cookieCollected?"Reach the DC exit":"Find the DC Cookie";
@@ -2444,6 +2448,7 @@ function loadSpriteAssets() {
 window.addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 canvas.addEventListener("click",()=>{if(state?.zonePrompt===MODE_DINING_CENTER)enterDiningCenterZone();});
+document.getElementById("mobileZoneButton").addEventListener("click",()=>{if(state?.zonePrompt===MODE_DINING_CENTER)enterDiningCenterZone();});
 const joystickEl=document.getElementById("joystick");
 joystickEl.addEventListener("pointerdown",event=>{event.preventDefault();joystick.pointerId=event.pointerId;joystickEl.setPointerCapture(event.pointerId);updateJoystick(event);});
 joystickEl.addEventListener("pointermove",event=>{if(event.pointerId===joystick.pointerId)updateJoystick(event);});
