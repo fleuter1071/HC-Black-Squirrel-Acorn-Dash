@@ -1057,6 +1057,7 @@ function drawZoneMarkers() {
 
 function drawDiningCenterZone() {
   drawDiningCenterRoom();
+  drawDiningCenterFloorDetails();
   DINING_CENTER_ZONE.counters.forEach(drawDiningCounter);
   DINING_CENTER_ZONE.tables.forEach(drawDiningTable);
   DINING_CENTER_ZONE.puddles.forEach(drawDiningPuddle);
@@ -1074,36 +1075,169 @@ function drawDiningCenterZone() {
 
 function drawDiningCenterRoom() {
   ctx.fillStyle="#dcc7a5";ctx.fillRect(0,0,DINING_CENTER_ZONE.width,DINING_CENTER_ZONE.height);
+  ctx.fillStyle="rgba(237,213,176,.38)";
+  for(let x=0;x<DINING_CENTER_ZONE.width;x+=160)for(let y=0;y<DINING_CENTER_ZONE.height;y+=160){
+    if(((x+y)/160)%3===0)ctx.fillRect(x,y,80,80);
+  }
   ctx.fillStyle="rgba(255,253,246,.18)";
   for(let x=0;x<DINING_CENTER_ZONE.width;x+=80)ctx.fillRect(x,0,4,DINING_CENTER_ZONE.height);
   for(let y=0;y<DINING_CENTER_ZONE.height;y+=80)ctx.fillRect(0,y,DINING_CENTER_ZONE.width,4);
   ctx.fillStyle="#c9ad84";ctx.fillRect(0,0,DINING_CENTER_ZONE.width,62);ctx.fillRect(0,DINING_CENTER_ZONE.height-62,DINING_CENTER_ZONE.width,62);
   ctx.fillStyle="#a6815e";ctx.fillRect(0,0,58,DINING_CENTER_ZONE.height);ctx.fillRect(DINING_CENTER_ZONE.width-58,0,58,DINING_CENTER_ZONE.height);
-  ctx.fillStyle="rgba(71,52,36,.13)";
-  [[180,1340,360,42],[2050,1350,315,42],[120,95,440,32]].forEach(([x,y,w,h])=>{roundRect(x,y,w,h,12);ctx.fill();});
+  drawDiningEntrance();
+  drawDiningWallDetails();
   ctx.fillStyle="#6a0000";ctx.font="900 28px Fraunces, Georgia";ctx.textAlign="left";ctx.fillText("DINING CENTER DASH",110,122);
   ctx.fillStyle="#5f4a35";ctx.font="900 15px Nunito";ctx.fillText("Snack mission in progress",112,150);
 }
 
+function drawDiningCenterFloorDetails() {
+  ctx.save();
+  ctx.fillStyle="rgba(111,82,48,.09)";
+  [[350,520,280,34],[890,560,360,30],[1300,890,320,36],[1680,710,270,30],[620,1285,310,32]].forEach(([x,y,w,h])=>{
+    roundRect(x,y,w,h,15);ctx.fill();
+  });
+  ctx.fillStyle="rgba(94,62,44,.13)";
+  [[410,1180],[702,1010],[940,650],[1240,970],[1760,580],[1985,1050]].forEach(([x,y],i)=>{
+    ctx.save();ctx.translate(x,y);ctx.rotate((i%3-.8)*.35);roundRect(-18,-4,36,8,4);ctx.fill();ctx.restore();
+  });
+  ctx.fillStyle="rgba(116,80,43,.16)";
+  [[525,1260],[1185,1120],[1550,860],[1940,620],[760,455],[1020,1320]].forEach(([x,y],i)=>{
+    ctx.beginPath();ctx.arc(x,y,3+(i%2),0,Math.PI*2);ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawDiningEntrance() {
+  ctx.save();
+  ctx.fillStyle="rgba(71,52,36,.13)";
+  [[180,1340,360,42],[2050,1350,315,42],[120,95,440,32]].forEach(([x,y,w,h])=>{roundRect(x,y,w,h,12);ctx.fill();});
+  ctx.fillStyle="#7a5438";roundRect(118,1308,292,72,16);ctx.fill();
+  ctx.fillStyle="#f0dfbd";roundRect(136,1320,256,42,13);ctx.fill();
+  ctx.strokeStyle="rgba(92,62,42,.45)";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#315440";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText("DC ENTRANCE",264,1347);
+  ctx.fillStyle="#315440";roundRect(2088,1348,220,58,16);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 20px Nunito";ctx.fillText("EXIT HALL",2198,1384);
+  ctx.restore();
+}
+
+function drawDiningWallDetails() {
+  ctx.save();
+  drawDiningMenuBoard(655,88,"TODAY",["soup", "snacks", "cookies"]);
+  drawDiningMenuBoard(970,88,"HONOR TRAY",["take one", "return two"]);
+  drawDiningBins(2148,1082);
+  drawDiningCondimentStation(190,585);
+  drawDiningTrayRack(2172,620);
+  ctx.restore();
+}
+
+function drawDiningMenuBoard(x,y,title,items) {
+  ctx.fillStyle="#315440";roundRect(x,y,220,74,10);ctx.fill();
+  ctx.fillStyle="#f8efd5";roundRect(x+10,y+10,200,54,7);ctx.fill();
+  ctx.fillStyle="#6a0000";ctx.font="900 12px Nunito";ctx.textAlign="center";ctx.fillText(title,x+110,y+29);
+  ctx.fillStyle="#315440";ctx.font="800 9px Nunito";
+  items.forEach((item,i)=>ctx.fillText(item.toUpperCase(),x+110,y+43+i*10));
+}
+
+function drawDiningBins(x,y) {
+  [["#315440","TRAY"],["#6a0000","CUPS"]].forEach(([color,label],i)=>{
+    const bx=x+i*64;ctx.fillStyle="rgba(56,42,31,.18)";roundRect(bx+4,y+5,46,56,8);ctx.fill();
+    ctx.fillStyle=color;roundRect(bx,y,46,56,8);ctx.fill();
+    ctx.fillStyle="#fff7d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText(label,bx+23,y+32);
+  });
+}
+
+function drawDiningCondimentStation(x,y) {
+  ctx.fillStyle="#8f684d";roundRect(x,y,135,58,10);ctx.fill();
+  ctx.strokeStyle="#5e3e2c";ctx.lineWidth=3;ctx.stroke();
+  [["#b65b43",-38],["#d6b04c",0],["#315440",38]].forEach(([color,dx])=>{
+    ctx.fillStyle=color;roundRect(x+68+dx-8,y+14,16,28,5);ctx.fill();
+    ctx.fillStyle="#f8efd5";ctx.fillRect(x+68+dx-5,y+10,10,8);
+  });
+}
+
+function drawDiningTrayRack(x,y) {
+  ctx.fillStyle="#8f684d";roundRect(x,y,70,225,12);ctx.fill();
+  ctx.strokeStyle="#5e3e2c";ctx.lineWidth=4;ctx.stroke();
+  ctx.strokeStyle="#f2dfbd";ctx.lineWidth=5;
+  for(let row=0;row<6;row++){ctx.beginPath();ctx.moveTo(x+12,y+26+row*31);ctx.lineTo(x+58,y+26+row*31);ctx.stroke();}
+  ctx.fillStyle="#315440";ctx.font="900 11px Nunito";ctx.textAlign="center";ctx.fillText("TRAY",x+35,y+205);ctx.fillText("RETURN",x+35,y+218);
+}
+
 function drawDiningCounter(counter) {
+  if(counter.label==="TRAY RETURN")return;
   ctx.save();
   ctx.fillStyle="rgba(56,42,31,.22)";roundRect(counter.x+8,counter.y+10,counter.w,counter.h,10);ctx.fill();
   ctx.fillStyle="#a47d55";roundRect(counter.x,counter.y,counter.w,counter.h,10);ctx.fill();
   ctx.strokeStyle="#704f35";ctx.lineWidth=4;ctx.stroke();
   ctx.fillStyle="#f2dfbd";roundRect(counter.x+16,counter.y+18,counter.w-32,38,8);ctx.fill();
   ctx.fillStyle="#315440";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText(counter.label,counter.x+counter.w/2,counter.y+43);
-  ctx.fillStyle="#8fb36d";for(let x=counter.x+42;x<counter.x+counter.w-30;x+=78){ctx.beginPath();ctx.arc(x,counter.y+88,13,0,Math.PI*2);ctx.fill();}
+  if(counter.label==="SNACK LINE")drawSnackLineProps(counter);
+  if(counter.label==="SOUP?")drawSoupStationProps(counter);
+  if(counter.label==="COOKIE WATCH")drawCookieWatchProps(counter);
   ctx.restore();
+}
+
+function drawSnackLineProps(counter) {
+  for(let x=counter.x+46;x<counter.x+counter.w-36;x+=72){
+    drawMiniPlate(x,counter.y+87,"#8fb36d");
+    ctx.fillStyle="#d9a54a";ctx.beginPath();ctx.arc(x+16,counter.y+84,7,0,Math.PI*2);ctx.fill();
+  }
+  ctx.strokeStyle="rgba(230,245,232,.65)";ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(counter.x+26,counter.y+67);ctx.lineTo(counter.x+counter.w-26,counter.y+67);ctx.stroke();
+}
+
+function drawSoupStationProps(counter) {
+  ctx.fillStyle="#8fb36d";for(let x=counter.x+64;x<counter.x+counter.w-36;x+=82){ctx.beginPath();ctx.arc(x,counter.y+88,13,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle="#5f4a35";ctx.beginPath();ctx.ellipse(counter.x+counter.w/2,counter.y+90,42,24,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f2dfbd";ctx.beginPath();ctx.ellipse(counter.x+counter.w/2,counter.y+84,35,16,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#fff7d8";ctx.lineWidth=3;
+  [-20,0,20].forEach(dx=>{ctx.beginPath();ctx.moveTo(counter.x+counter.w/2+dx,counter.y+65);ctx.quadraticCurveTo(counter.x+counter.w/2+dx+10,counter.y+55,counter.x+counter.w/2+dx,counter.y+46);ctx.stroke();});
+  ctx.strokeStyle="#704f35";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(counter.x+counter.w/2+43,counter.y+82);ctx.lineTo(counter.x+counter.w/2+70,counter.y+67);ctx.stroke();
+}
+
+function drawCookieWatchProps(counter) {
+  ctx.fillStyle="rgba(230,245,232,.42)";roundRect(counter.x+38,counter.y+66,counter.w-76,45,18);ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.62)";ctx.lineWidth=3;ctx.stroke();
+  for(let x=counter.x+68;x<counter.x+counter.w-44;x+=72){
+    ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(x,counter.y+90,13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#5a3525";[[-4,-3],[5,1],[-1,6]].forEach(([dx,dy])=>{ctx.beginPath();ctx.arc(x+dx,counter.y+90+dy,2,0,Math.PI*2);ctx.fill();});
+  }
+  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(counter.x+counter.w-34,counter.y+43,7,0,Math.PI*2);ctx.fill();
 }
 
 function drawDiningTable(table) {
   ctx.save();
+  drawDiningChairs(table);
   ctx.fillStyle="rgba(56,42,31,.2)";roundRect(table.x+8,table.y+9,table.w,table.h,16);ctx.fill();
   ctx.fillStyle="#8f684d";roundRect(table.x,table.y,table.w,table.h,14);ctx.fill();
   ctx.strokeStyle="#5e3e2c";ctx.lineWidth=4;ctx.stroke();
   ctx.fillStyle="#b8895f";roundRect(table.x+16,table.y+15,table.w-32,table.h-30,10);ctx.fill();
-  ctx.fillStyle="rgba(255,245,214,.5)";
-  [[table.x+32,table.y+28],[table.x+table.w-44,table.y+table.h-32]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();});
+  drawMiniPlate(table.x+32,table.y+28,"rgba(255,245,214,.58)");
+  drawMiniPlate(table.x+table.w-44,table.y+table.h-32,"rgba(255,245,214,.58)");
+  if((table.x+table.y)%3===0)drawFoodTray(table.x+table.w/2,table.y+table.h/2,.78);
+  ctx.fillStyle="rgba(255,241,189,.55)";
+  [[table.x+table.w*.42,table.y+28],[table.x+table.w*.66,table.y+table.h-24]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
+  ctx.restore();
+}
+
+function drawDiningChairs(table) {
+  ctx.save();
+  ctx.fillStyle="rgba(56,42,31,.14)";
+  [[table.x+42,table.y-14,38,16],[table.x+table.w-80,table.y-14,38,16],[table.x+42,table.y+table.h-2,38,16],[table.x+table.w-80,table.y+table.h-2,38,16]].forEach(([x,y,w,h])=>{roundRect(x,y,w,h,7);ctx.fill();});
+  ctx.restore();
+}
+
+function drawMiniPlate(x,y,color="#f6f0dc") {
+  ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(112,79,53,.18)";ctx.lineWidth=2;ctx.stroke();
+}
+
+function drawFoodTray(x,y,scale=1) {
+  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+  ctx.fillStyle="#d7d2c4";roundRect(-28,-16,56,32,6);ctx.fill();
+  ctx.strokeStyle="#7a7f76";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#f6f0dc";roundRect(-20,-9,18,12,3);ctx.fill();
+  ctx.fillStyle="#8fb36d";roundRect(6,-8,13,11,3);ctx.fill();
   ctx.restore();
 }
 
@@ -1116,17 +1250,25 @@ function drawDiningPuddle(puddle) {
 
 function drawDiningSnack(snack) {
   if(snack.collected)return;
-  drawAcorn({ ...snack, chapterIndex:0, collected:false });
+  const bob=Math.sin(state.elapsed*5+snack.x)*4;
+  ctx.save();ctx.translate(snack.x,snack.y+bob);
+  ctx.shadowColor="#fff09b";ctx.shadowBlur=12;
+  drawMiniPlate(0,7,"#fff4c4");
+  ctx.rotate(-.35);
+  ctx.fillStyle="#b96e22";ctx.beginPath();ctx.ellipse(0,0,9,13,0,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;ctx.fillStyle="#704426";ctx.fillRect(-9,-11,18,7);ctx.fillRect(2,-18,3,8);
+  ctx.restore();
 }
 
 function drawDiningCookie(cookie) {
   if(cookie.collected)return;
   const pulse=1+Math.sin(state.elapsed*6)*.08;
   ctx.save();ctx.translate(cookie.x,cookie.y);ctx.scale(pulse,pulse);
-  ctx.shadowColor="#ffe38a";ctx.shadowBlur=22;
-  ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(0,0,28,0,Math.PI*2);ctx.fill();
+  ctx.shadowColor="#ffe38a";ctx.shadowBlur=28;
+  ctx.strokeStyle="rgba(255,241,189,.72)";ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,42,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.fill();
   ctx.shadowBlur=0;ctx.strokeStyle="#7b4b2d";ctx.lineWidth=4;ctx.stroke();
-  ctx.fillStyle="#5a3525";[[-9,-8],[8,-3],[-2,10],[13,12]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle="#5a3525";[[-12,-8],[8,-5],[-3,11],[14,12],[1,-1],[-16,8]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
   ctx.fillStyle="#fff8d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("DC",0,4);ctx.restore();
 }
 
@@ -1134,6 +1276,8 @@ function drawDiningCoffee(coffee) {
   if(coffee.collected)return;
   ctx.save();ctx.translate(coffee.x,coffee.y+Math.sin(state.elapsed*5)*3);
   ctx.shadowColor="#d4d07d";ctx.shadowBlur=18;
+  ctx.strokeStyle="rgba(255,244,210,.65)";ctx.lineWidth=3;
+  [-10,3,14].forEach(dx=>{ctx.beginPath();ctx.moveTo(dx,-31);ctx.quadraticCurveTo(dx+8,-42,dx,-52);ctx.stroke();});
   ctx.fillStyle="#fff4d2";roundRect(-18,-20,36,34,8);ctx.fill();
   ctx.strokeStyle="#7a5132";ctx.lineWidth=4;ctx.stroke();
   ctx.fillStyle="#6b3d25";ctx.fillRect(-12,-13,24,9);
@@ -1145,6 +1289,10 @@ function drawDiningExit() {
   const exit=DINING_CENTER_ZONE.exit,ready=state.zone.cookieCollected&&state.zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks;
   const pulse=Math.sin(state.elapsed*5)*.5+.5;
   ctx.save();
+  ctx.fillStyle="#6f563f";roundRect(exit.x-105,exit.y-72,210,144,20);ctx.fill();
+  ctx.fillStyle=ready?"#dff0b4":"#725842";roundRect(exit.x-82,exit.y-50,164,100,14);ctx.fill();
+  ctx.fillStyle="#315440";roundRect(exit.x-53,exit.y-83,106,28,8);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText("EXIT",exit.x,exit.y-63);
   ctx.strokeStyle=ready?"#caff75":"rgba(255,253,246,.6)";
   ctx.lineWidth=ready?6+pulse*4:4;
   ctx.beginPath();ctx.arc(exit.x,exit.y,exit.radius+pulse*8,0,Math.PI*2);ctx.stroke();
@@ -1170,26 +1318,40 @@ function drawDiningStudentHazard(h) {
   ctx.fillStyle="#503629";ctx.beginPath();ctx.arc(0,-23,10,Math.PI,0);ctx.fill();
   ctx.fillStyle="#d7d2c4";roundRect(-28,-2,56,22,5);ctx.fill();ctx.strokeStyle="#7a7f76";ctx.lineWidth=3;ctx.stroke();
   ctx.fillStyle="#8fb36d";roundRect(-18,3,15,10,3);ctx.fill();ctx.fillStyle="#f6f0dc";roundRect(5,3,16,10,3);ctx.fill();
+  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(23,5,5,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
 
 function drawSlidingTrayHazard() {
-  ctx.fillStyle="rgba(24,37,31,.24)";roundRect(-38,-16,76,32,8);ctx.fill();
-  ctx.fillStyle="#d7d2c4";roundRect(-34,-20,68,40,7);ctx.fill();
+  ctx.fillStyle="rgba(255,244,210,.45)";roundRect(-72,-12,30,7,4);ctx.fill();roundRect(-82,4,42,7,4);ctx.fill();
+  ctx.fillStyle="rgba(24,37,31,.24)";roundRect(-42,-18,84,36,8);ctx.fill();
+  ctx.fillStyle="#d7d2c4";roundRect(-38,-22,76,44,7);ctx.fill();
   ctx.strokeStyle="#7a7f76";ctx.lineWidth=4;ctx.stroke();
-  ctx.fillStyle="#f6f0dc";roundRect(-22,-10,20,14,3);ctx.fill();
-  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(15,7,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f6f0dc";roundRect(-25,-11,22,16,3);ctx.fill();
+  ctx.fillStyle="#8fb36d";roundRect(4,-12,17,13,3);ctx.fill();
+  ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(17,10,7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#fff7d8";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-31,13);ctx.lineTo(30,-15);ctx.stroke();
 }
 
 function drawDiningCenterObjective() {
-  const x=state.camera.x-canvas.width/2+26,y=state.camera.y-canvas.height/2+24;
+  if(isMobileView())return;
+  const view=getDiningVisibleView(),x=view.x+26,y=view.y+(isMobileView()?82:118);
   ctx.save();
-  ctx.fillStyle="rgba(255,253,246,.92)";roundRect(x,y,330,86,12);ctx.fill();
+  ctx.fillStyle="rgba(255,253,246,.94)";roundRect(x,y,294,92,12);ctx.fill();
   ctx.strokeStyle="rgba(49,84,64,.28)";ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle="#6a0000";ctx.font="900 14px Nunito";ctx.fillText("Dining Center Dash",x+18,y+26);
-  ctx.fillStyle="#315440";ctx.font="900 18px Nunito";ctx.fillText(`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks} · Bonks ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}`,x+18,y+52);
+  ctx.fillStyle="#6a0000";ctx.font="900 13px Nunito";ctx.fillText("Dining Center Dash",x+16,y+24);
+  ctx.fillStyle="#315440";ctx.font="900 16px Nunito";ctx.fillText(`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks}`,x+16,y+50);
+  ctx.fillStyle=state.zone.bonks>=2?"#8b2e22":"#315440";ctx.fillText(`Bonks ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}`,x+154,y+50);
   ctx.fillStyle=state.zone.cookieCollected?"#315440":"#8a6b3f";ctx.font="900 13px Nunito";ctx.fillText(state.zone.cookieCollected?"Cookie secured. Find the exit.":"Grab the legendary DC Cookie.",x+18,y+73);
   ctx.restore();
+}
+
+function getDiningVisibleView() {
+  const zoom=isMobileView()?Math.max(.84,canvas.width/DINING_CENTER_ZONE.width,canvas.height/DINING_CENTER_ZONE.height):1;
+  const halfW=canvas.width/(2*zoom),halfH=canvas.height/(2*zoom);
+  const focusX=clamp(state.camera.x,halfW,DINING_CENTER_ZONE.width-halfW);
+  const focusY=clamp(state.camera.y,halfH,DINING_CENTER_ZONE.height-halfH);
+  return { x:focusX-halfW, y:focusY-halfH, w:halfW*2, h:halfH*2, zoom };
 }
 
 function drawCampus() {
@@ -2206,13 +2368,17 @@ function resumeGame() {
 function updateHud(){
   document.getElementById("score").textContent=state.score;
   const mobileZoneButton=document.getElementById("mobileZoneButton");
-  mobileZoneButton.classList.toggle("show",isMobileView()&&state.running&&state.mode===MODE_HUB&&state.zonePrompt===MODE_DINING_CENTER);
+  const showMobileZoneButton=isMobileView()&&state.running&&state.mode===MODE_HUB&&state.zonePrompt===MODE_DINING_CENTER;
+  mobileZoneButton.classList.toggle("show",showMobileZoneButton);
   if(state.mode === MODE_DINING_CENTER && state.zone){
     document.getElementById("tourKicker").textContent=`DC snacks ${state.zone.snacksCollected} / ${DINING_CENTER_ZONE.requiredSnacks}`;
     document.getElementById("mobileDestination").textContent=state.zone.cookieCollected?"Reach the DC exit":"Find the DC Cookie";
+    document.getElementById("mobilePlayTip").textContent="Collect snacks • Grab the DC Cookie • Find the exit";
   } else {
     document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
-    const chapter=trailChapters[state.chapterIndex];document.getElementById("mobileDestination").textContent=chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
+    const chapter=trailChapters[state.chapterIndex];
+    document.getElementById("mobileDestination").textContent=showMobileZoneButton?"At Dining Center":chapter?`Next stop: ${chapter.destination}`:"Campus trail complete";
+    document.getElementById("mobilePlayTip").textContent=showMobileZoneButton?"DC entrance reached":"Drag the joystick • Follow glowing acorns • Dodge traffic";
   }
   document.getElementById("combo").textContent=state.combo;document.getElementById("comboCard").classList.toggle("hot",state.combo>=3);
   const timerValue=state.mode === MODE_DINING_CENTER && state.zone ? state.zone.timeLeft : state.timeLeft;
