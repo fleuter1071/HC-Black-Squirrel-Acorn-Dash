@@ -51,7 +51,7 @@ const DINING_CENTER_ZONE = {
   coffee: { x: 1180, y: 825, collected: false, respawn: 0 },
   snacks: [
     [315,1185],[505,1110],[700,1005],[925,1045],[1120,950],[1325,1030],
-    [1545,900],[1760,760],[1955,605],[1855,410],[1540,470],[1185,570]
+    [1545,900],[1760,760],[1955,605],[1855,410],[1540,470],[1060,570]
   ],
   puddles: [
     { x:760, y:1220, rx:82, ry:36, angle:.18 },
@@ -78,6 +78,18 @@ const DINING_CENTER_ZONE = {
     { type:"tray", speed:235, radius:28, segment:0, progress:.65, points:[[1320,430],[2140,430]] }
   ]
 };
+const DINING_CENTER_CHARACTERS = {
+  arjun: { name:"Arjun Shah", title:"The Dining Center Veteran", x:430, y:1285, sprite:"arjun" },
+  maggie: { name:"Maggie Doyle", title:"The Library Regular", x:1175, y:650, sprite:"maggie" },
+  elena: {
+    name:"Elena Cruz", title:"The Bi-Co Cross-Registrant", sprite:"elena", speed:205, radius:28,
+    points:[[500,1350],[860,1320],[1260,1315],[1660,1310],[2020,1285],[2260,1260]]
+  }
+};
+const DINING_CHARACTER_SPRITE_WIDTH = 72;
+const DINING_CHARACTER_SPRITE_HEIGHT = 104;
+const ELENA_WARNING_SECONDS = 1.35;
+const ARJUN_GUIDE_SECONDS = 11;
 const SOUND_SPRITES = {
   start: [0, 450],
   acorn: [530, 240],
@@ -176,7 +188,12 @@ const powerupTypes = [
 
 const hazardRoutes = [
   { type:"student", style:"hoodie", color:"#cf704d", skin:"#efc3a1", hair:"#503629", speed:72, radius:18, points:[[510,405],[790,445],[890,550],[705,615]], offset:0 },
-  { type:"student", style:"backpack", color:"#5d78a7", skin:"#8c5f45", hair:"#25221e", speed:68, radius:18, points:[[1050,700],[1180,625],[1410,640],[1260,760]], offset:1.8 },
+  {
+    type:"student", style:"dave", character:"dave", name:"Dave", situation:"Blue Bus. Pizza mission.",
+    speed:68, radius:18, oneWay:true,
+    points:[[1260,760],[1010,714],[945,540],[790,445],[620,405],[520,300],[620,230],[760,250],[840,260],[930,270],[1010,250]],
+    offset:1.8
+  },
   { type:"student", style:"books", color:"#e0a539", skin:"#c98e70", hair:"#a05d38", speed:74, radius:18, points:[[410,650],[680,705],[810,615],[550,535]], offset:3.4 },
   { type:"bike", style:"helmet", color:"#4779a2", frame:"#315f76", skin:"#d99b72", hair:"#52372b", speed:155, radius:20, points:[[140,405],[470,405],[780,450],[1030,665],[1420,640]], offset:1 },
   { type:"bike", style:"basket", color:"#6d4c91", frame:"#7c4c52", skin:"#7f563f", hair:"#25221e", speed:140, radius:20, points:[[1060,900],[1015,715],[950,535],[730,420]], offset:3 },
@@ -197,6 +214,8 @@ let toastTimer;
 let storyTimer;
 let countdownTimer;
 let professorBoltzSprite;
+let daveSprite;
+const diningCharacterSprites = {};
 const keys = new Set();
 const joystick = { x:0, y:0, pointerId:null };
 let portraitBypass = false;
@@ -418,6 +437,7 @@ function updateTransientEffects(dt) {
 function createDiningCenterZoneState() {
   return {
     id: DINING_CENTER_ZONE.id,
+    elapsed: 0,
     timeLeft: DINING_CENTER_ZONE.duration,
     snacksCollected: 0,
     cookieCollected: false,
@@ -428,7 +448,33 @@ function createDiningCenterZoneState() {
     cookie: { ...DINING_CENTER_ZONE.cookie, collected:false },
     coffee: { ...DINING_CENTER_ZONE.coffee, collected:false, respawn:0 },
     hazards: DINING_CENTER_ZONE.hazards.map(h=>({ ...h, points:h.points.map(([x,y])=>[x,y]) })),
-    returnTo: { x: state.player.x, y: state.player.y }
+    characters: {
+      arjun: {
+        ...DINING_CENTER_CHARACTERS.arjun, line:"", lineLife:0, introduced:false,
+        guideTime:ARJUN_GUIDE_SECONDS
+      },
+      maggie: {
+        ...DINING_CENTER_CHARACTERS.maggie, line:"", lineLife:0, greeted:false, trayReacted:false
+      },
+      elena: {
+        ...DINING_CENTER_CHARACTERS.elena, x:DINING_CENTER_CHARACTERS.elena.points[0][0],
+        y:DINING_CENTER_CHARACTERS.elena.points[0][1], line:"", lineLife:0, warning:0,
+        active:false, finished:false, segment:0, progress:0, angle:0
+      }
+    },
+    returnTo: { x: state.player.x, y: state.player.y },
+    visual: {
+      roomLight: reducedMotionQuery.matches ? 1 : .25,
+      snackLight: reducedMotionQuery.matches ? 1 : 0,
+      soupLight: reducedMotionQuery.matches ? 1 : 0,
+      cookieLight: reducedMotionQuery.matches ? 1 : 0,
+      exitUnlocked:false,
+      exitGlow:0,
+      doorOpen:0,
+      lightSweep:0,
+      exitLabelScale:.72,
+      cookieBurst:{ active:false, x:0, y:0, scale:.7, alpha:0, glow:0, spin:0 }
+    }
   };
 }
 
@@ -444,11 +490,31 @@ function enterDiningCenterZone() {
   state.activePowerups.soup=0;state.activePowerups.skeetersBoost=0;state.activePowerups.cape=0;
   stopCapeFlightAudio(.2);
   state.muted=muted;
-  showToast(DINING_CENTER_ZONE.subtitle);
   document.getElementById("missionTitle").textContent=DINING_CENTER_ZONE.name;
   document.getElementById("missionText").textContent="Collect 12 snack acorns, grab the DC Cookie, then reach the glowing exit.";
   document.getElementById("mobileZoneButton").classList.remove("show");
+  playDiningCenterEntrance();
   playSound("powerup");
+}
+
+function playDiningCenterEntrance() {
+  const visual=state.zone?.visual,intro=document.getElementById("dcZoneIntro");
+  if(!visual||!intro)return;
+  intro.style.visibility="visible";
+  if(window.gsap&&!reducedMotionQuery.matches){
+    gsap.killTweensOf([visual,intro]);
+    gsap.timeline()
+      .fromTo(intro,{autoAlpha:0,y:18,scale:.94},{autoAlpha:1,y:0,scale:1,duration:.38,ease:"back.out(1.8)"})
+      .to(visual,{roomLight:1,duration:.55,ease:"sine.out"},"<")
+      .to(visual,{snackLight:1,duration:.28,ease:"power2.out"},"-=.1")
+      .to(visual,{soupLight:1,duration:.28,ease:"power2.out"},"-=.12")
+      .to(visual,{cookieLight:1,duration:.28,ease:"power2.out"},"-=.12")
+      .to(intro,{autoAlpha:0,y:-12,duration:.38,ease:"power2.in",delay:.65,onComplete:()=>{intro.style.visibility="hidden";}});
+  } else {
+    visual.roomLight=visual.snackLight=visual.soupLight=visual.cookieLight=1;
+    intro.style.opacity="1";intro.style.transform="translate(-50%, 0) scale(1)";
+    setTimeout(()=>{intro.style.opacity="0";intro.style.visibility="hidden";},700);
+  }
 }
 
 function returnToHubFromDiningCenter(message) {
@@ -496,11 +562,13 @@ function failDiningCenterZone(message) {
 
 function updateDiningCenterZone(dt) {
   if(!state.zone || state.zone.result)return;
+  state.zone.elapsed+=dt;
   state.zone.coffeeBoost=Math.max(0,state.zone.coffeeBoost-dt);
   if(state.zone.coffee.respawn>0){
     state.zone.coffee.respawn=Math.max(0,state.zone.coffee.respawn-dt);
     if(state.zone.coffee.respawn===0)state.zone.coffee.collected=false;
   }
+  updateDiningCenterCharacters(dt);
   state.zone.hazards.forEach(h=>moveDiningCenterHazard(h,dt));
   state.zone.snacks.forEach(snack=>{
     if(!snack.collected && distance(state.player,snack)<34)collectDiningCenterSnack(snack);
@@ -515,10 +583,83 @@ function updateDiningCenterZone(dt) {
   if(!state.player.invulnerable){
     const hit=state.zone.hazards.find(h=>distance(state.player,h)<state.player.r+h.radius);
     if(hit)bonkDiningCenterHazard(hit);
+    const elena=state.zone.characters.elena;
+    if(elena.active&&!elena.finished&&distance(state.player,elena)<state.player.r+elena.radius){
+      bonkDiningCenterHazard({ type:"elena", x:elena.x, y:elena.y });
+    }
   }
   if(state.zone.cookieCollected && state.zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks && distance(state.player,DINING_CENTER_ZONE.exit)<DINING_CENTER_ZONE.exit.radius){
     completeDiningCenterZone();
   }
+}
+
+function updateDiningCenterCharacters(dt) {
+  const characters=state.zone.characters;
+  Object.values(characters).forEach(character=>character.lineLife=Math.max(0,character.lineLife-dt));
+  characters.arjun.guideTime=Math.max(0,characters.arjun.guideTime-dt);
+
+  if(!characters.arjun.introduced&&state.zone.elapsed>1.25){
+    characters.arjun.introduced=true;
+    setDiningCharacterLine("arjun","Snack line first. The cookie is the victory lap.",4.4);
+  }
+
+  if(!characters.maggie.greeted&&distance(state.player,characters.maggie)<155){
+    characters.maggie.greeted=true;
+    setDiningCharacterLine("maggie","This was supposed to be a quiet table.",3.5);
+  }
+  if(!characters.maggie.trayReacted){
+    const trayClose=state.zone.hazards.some(h=>h.type==="tray"&&distance(h,characters.maggie)<125);
+    if(trayClose){
+      characters.maggie.trayReacted=true;
+      setDiningCharacterLine("maggie","Please don't knock over the coffee.",3.5);
+    }
+  }
+
+  const elena=characters.elena;
+  if(!elena.active&&!elena.finished&&elena.warning<=0&&(state.zone.snacksCollected>=5||state.zone.elapsed>=22)){
+    elena.warning=ELENA_WARNING_SECONDS;
+    setDiningCharacterLine("elena","The Blue Bus!",2.2);
+    showToast("Elena is making a run for the Blue Bus!");
+  }
+  if(elena.warning>0){
+    elena.warning=Math.max(0,elena.warning-dt);
+    if(elena.warning===0)elena.active=true;
+  } else if(elena.active&&!elena.finished){
+    moveDiningCenterCharacter(elena,dt);
+  }
+}
+
+function setDiningCharacterLine(id,text,duration=3) {
+  const character=state.zone?.characters?.[id];
+  if(!character)return;
+  character.line=text;
+  character.lineLife=duration;
+}
+
+function moveDiningCenterCharacter(character,dt) {
+  const toIndex=character.segment+1;
+  if(toIndex>=character.points.length){
+    character.active=false;
+    character.finished=true;
+    character.lineLife=0;
+    return;
+  }
+  const from=character.points[character.segment],to=character.points[toIndex];
+  const len=Math.hypot(to[0]-from[0],to[1]-from[1])||1;
+  character.progress+=character.speed*dt/len;
+  if(character.progress>=1){
+    character.progress-=1;
+    character.segment++;
+    if(character.segment>=character.points.length-1){
+      character.x=to[0];character.y=to[1];
+      character.active=false;character.finished=true;
+      return;
+    }
+  }
+  const a=character.points[character.segment],b=character.points[character.segment+1];
+  character.x=a[0]+(b[0]-a[0])*character.progress;
+  character.y=a[1]+(b[1]-a[1])*character.progress;
+  character.angle=Math.atan2(b[1]-a[1],b[0]-a[0]);
 }
 
 function moveDiningCenterHazard(h,dt) {
@@ -542,17 +683,67 @@ function collectDiningCenterSnack(snack) {
   spawnParticles(snack.x,snack.y,"#f4c65f");
   addScorePop(snack.x,snack.y,`SNACK ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks}`,"#fff4b4",16);
   playSound("acorn");
+  updateDiningExitUnlock();
 }
 
 function collectDiningCenterCookie() {
+  triggerDiningCookieMoment(state.zone.cookie.x,state.zone.cookie.y);
   state.zone.cookie.collected=true;
   state.zone.cookieCollected=true;
   state.score+=3;
   state.flash=.35;
   spawnParticles(state.zone.cookie.x,state.zone.cookie.y,"#ffe38a");
   addScorePop(state.zone.cookie.x,state.zone.cookie.y,"DC COOKIE! +3","#fff1bd",23);
-  showToast("Legendary DC Cookie acquired. Now find the exit!");
+  showToast(`Legendary DC Cookie acquired. ${getDiningCenterObjectiveText()}.`);
   playSound("golden");
+  updateDiningExitUnlock();
+}
+
+function triggerDiningCookieMoment(x,y) {
+  const burst=state.zone?.visual?.cookieBurst;
+  if(!burst)return;
+  Object.assign(burst,{ active:true,x,y,scale:.72,alpha:1,glow:0,spin:0 });
+  for(let i=0;i<16;i++){
+    const angle=Math.PI*2*i/16,speed=55+(i%4)*18;
+    state.particles.push({ x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:.8,color:i%3===0?"#5a3525":"#ffe38a" });
+  }
+  if(window.gsap&&!reducedMotionQuery.matches){
+    gsap.killTweensOf(burst);
+    gsap.timeline()
+      .to(burst,{scale:1.75,glow:1,spin:.35,duration:.34,ease:"back.out(2.5)"})
+      .to(burst,{scale:2.15,alpha:0,glow:0,duration:.42,ease:"power2.in",onComplete:()=>{burst.active=false;}});
+  } else {
+    burst.scale=1.6;burst.glow=1;
+    setTimeout(()=>{burst.active=false;burst.alpha=0;},320);
+  }
+}
+
+function updateDiningExitUnlock() {
+  const zone=state.zone,visual=zone?.visual;
+  if(!zone||!visual||visual.exitUnlocked)return;
+  const ready=zone.cookieCollected&&zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks;
+  if(!ready)return;
+  visual.exitUnlocked=true;
+  showToast("Exit unlocked. Escape with dignity!");
+  playSound("powerup");
+  if(window.gsap&&!reducedMotionQuery.matches){
+    gsap.killTweensOf(visual);
+    gsap.timeline()
+      .to(visual,{exitGlow:1,doorOpen:1,exitLabelScale:1,duration:.52,ease:"back.out(2.1)"})
+      .fromTo(visual,{lightSweep:0},{lightSweep:1,duration:.72,ease:"power2.out"},"-=.24")
+      .to(visual,{lightSweep:0,duration:.38,ease:"sine.in"});
+  } else {
+    visual.exitGlow=visual.doorOpen=visual.exitLabelScale=1;
+    visual.lightSweep=.65;
+  }
+}
+
+function getDiningCenterObjectiveText() {
+  const snacksLeft=Math.max(0,DINING_CENTER_ZONE.requiredSnacks-state.zone.snacksCollected);
+  if(snacksLeft>0&&!state.zone.cookieCollected)return `${snacksLeft} snack${snacksLeft===1?"":"s"} + DC Cookie`;
+  if(snacksLeft>0)return `${snacksLeft} snack${snacksLeft===1?"":"s"} left`;
+  if(!state.zone.cookieCollected)return "Find the DC Cookie";
+  return "Reach the glowing exit";
 }
 
 function collectDiningCenterCoffee() {
@@ -573,8 +764,9 @@ function bonkDiningCenterHazard(hazard) {
   state.combo=0;state.comboWindow=0;
   state.shake=reducedMotionQuery.matches?0:.2;
   spawnParticles(state.player.x,state.player.y,"#ffffff");
-  state.reactions.push({ x:state.player.x, y:state.player.y-30, life:1, text:hazard.type==="tray"?"TRAY TRAFFIC!":"Sorry, SBS!", color:"#fff5da", stars:false });
-  showToast(`Tray traffic bonk ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}.`);
+  const elenaHit=hazard.type==="elena";
+  state.reactions.push({ x:state.player.x, y:state.player.y-30, life:1, text:elenaHit?"BLUE BUS SPRINT!":hazard.type==="tray"?"TRAY TRAFFIC!":"Sorry, SBS!", color:"#fff5da", stars:false });
+  showToast(elenaHit?`Elena is late for the bus! Bonk ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}.`:`Tray traffic bonk ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}.`);
   playSound("bump");
   if(state.zone.bonks>=DINING_CENTER_ZONE.bonkLimit)failDiningCenterZone("Tray traffic has defeated the squirrel.");
 }
@@ -607,6 +799,7 @@ function updateZoneEntryPrompt() {
 }
 
 function moveHazard(h, dt) {
+  if(h.finished)return;
   if (h.dwellLeft > 0) {
     h.dwellLeft = Math.max(0, h.dwellLeft - dt);
     h.doorsOpen = true;
@@ -621,7 +814,11 @@ function moveHazard(h, dt) {
     h.progress -= 1;
     h.segment = (h.segment + 1) % h.points.length;
     if (h.oneWay && h.segment === h.points.length - 1) {
-      h.segment = 0; h.progress = 0; h.x = h.points[0][0]; h.y = h.points[0][1];
+      h.progress = 0;
+      h.x = h.points[h.points.length-1][0];
+      h.y = h.points[h.points.length-1][1];
+      h.finished = true;
+      return;
     }
     if (h.segment === h.stopAt) { h.progress = 0; h.dwellLeft = h.dwell; }
   }
@@ -666,6 +863,7 @@ function updateNearMiss(hazard) {
 }
 
 function isHazardCollision(hazard) {
+  if(hazard.finished)return false;
   if (hazard.type === "bus") return isBusCollision(hazard);
   return distance(state.player, hazard) < state.player.r + hazard.radius;
 }
@@ -889,7 +1087,7 @@ function bump(hazard) {
       ? { text:"Bike lane!", color:"#fff5da", stars:false }
       : { text:"Sorry, SBS!", color:"#fff5da", stars:false };
   state.reactions.push({ x:state.player.x, y:state.player.y-28, life:1.05, ...reaction });
-  const label = hazard.type === "bus" ? "Blue Bus at Stokes Bay!" : hazard.type === "cart" ? "Chuck checked on SBS!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
+  const label = hazard.character === "dave" ? "Dave's pizza mission crossed paths with SBS!" : hazard.type === "bus" ? "Blue Bus at Stokes Bay!" : hazard.type === "cart" ? "Chuck checked on SBS!" : hazard.type === "bike" ? "Bike lane surprise!" : "Student crossing!";
   showToast(`${label}${lost ? " Grab that runaway acorn!" : ""}`);
   spawnParticles(state.player.x, state.player.y, "#ffffff");
   playSound(hazard.type==="cart"||hazard.type==="bus" ? "wobble" : "bump");
@@ -1058,19 +1256,126 @@ function drawZoneMarkers() {
 function drawDiningCenterZone() {
   drawDiningCenterRoom();
   drawDiningCenterFloorDetails();
+  drawDiningCenterLighting();
+  drawDiningWallDetails();
   DINING_CENTER_ZONE.counters.forEach(drawDiningCounter);
   DINING_CENTER_ZONE.tables.forEach(drawDiningTable);
   DINING_CENTER_ZONE.puddles.forEach(drawDiningPuddle);
   drawDiningExit();
+  drawDiningCookieTrail();
+  drawDiningCharacterGuidance();
   state.zone.snacks.forEach(drawDiningSnack);
   drawDiningCoffee(state.zone.coffee);
   drawDiningCookie(state.zone.cookie);
+  drawDiningCookieBurst();
+  drawDiningCenterCharacters();
   state.zone.hazards.forEach(drawDiningHazard);
   drawPlayer();
   state.particles.forEach(drawParticle);
   state.reactions.forEach(drawReaction);
   state.scorePops.forEach(drawScorePop);
   drawDiningCenterObjective();
+}
+
+function drawDiningCharacterGuidance() {
+  const arjun=state.zone?.characters?.arjun;
+  const cleanupNeeded=state.zone?.cookieCollected&&state.zone.snacksCollected<DINING_CENTER_ZONE.requiredSnacks;
+  if(!arjun||(arjun.guideTime<=0&&!cleanupNeeded))return;
+  const nextSnack=state.zone.snacks.find(snack=>!snack.collected);
+  if(!nextSnack)return;
+  const pulse=Math.sin(state.elapsed*6)*.5+.5;
+  ctx.save();
+  ctx.strokeStyle=`rgba(248,213,119,${.42+pulse*.35})`;
+  ctx.lineWidth=4+pulse*2;
+  ctx.setLineDash([9,10]);
+  ctx.beginPath();ctx.arc(nextSnack.x,nextSnack.y,30+pulse*7,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="rgba(49,84,64,.9)";roundRect(nextSnack.x-48,nextSnack.y-58,96,24,10);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 10px Nunito";ctx.textAlign="center";
+  ctx.fillText(cleanupNeeded?"SNACK LEFT":"ARJUN'S TIP",nextSnack.x,nextSnack.y-42);
+  ctx.restore();
+}
+
+function drawDiningCenterCharacters() {
+  const characters=state.zone?.characters;
+  if(!characters)return;
+  drawDiningCharacter(characters.arjun);
+  drawDiningCharacter(characters.maggie);
+  if(!characters.elena.finished)drawDiningCharacter(characters.elena);
+}
+
+function drawDiningCharacter(character) {
+  const isElena=character.sprite==="elena";
+  const visible=!isElena||character.active||character.warning>0;
+  if(!visible)return;
+  const walking=isElena&&character.active;
+  const bounce=walking?Math.sin(state.elapsed*15)*3:Math.sin(state.elapsed*3+character.x)*1.2;
+  const scale=isElena&&character.warning>0?1+Math.sin(state.elapsed*12)*.04:1;
+  ctx.save();
+  ctx.translate(character.x,character.y+bounce);
+  ctx.scale(scale,scale);
+  if(walking&&Math.cos(character.angle)<0)ctx.scale(-1,1);
+  ctx.fillStyle="rgba(24,37,31,.2)";
+  ctx.beginPath();ctx.ellipse(0,4,27,9,0,0,Math.PI*2);ctx.fill();
+  const sprite=diningCharacterSprites[character.sprite];
+  if(sprite?.complete&&sprite.naturalWidth){
+    ctx.drawImage(sprite,-DINING_CHARACTER_SPRITE_WIDTH/2,-DINING_CHARACTER_SPRITE_HEIGHT+5,DINING_CHARACTER_SPRITE_WIDTH,DINING_CHARACTER_SPRITE_HEIGHT);
+  } else {
+    drawDiningCharacterFallback(character);
+  }
+  ctx.restore();
+
+  if(isElena&&character.warning>0)drawDiningCharacterWarning(character);
+  drawDiningCharacterLabel(character);
+  if(character.lineLife>0)drawDiningCharacterBubble(character);
+}
+
+function drawDiningCharacterFallback(character) {
+  const colors={ arjun:"#8b0000",maggie:"#7d263a",elena:"#4d91c7" };
+  ctx.fillStyle=colors[character.sprite]||"#315440";
+  roundRect(-18,-58,36,58,10);ctx.fill();
+  ctx.fillStyle="#d8a078";ctx.beginPath();ctx.arc(0,-72,17,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 12px Nunito";ctx.textAlign="center";
+  ctx.fillText(character.name.split(" ").map(part=>part[0]).join(""),0,-29);
+}
+
+function drawDiningCharacterLabel(character) {
+  const near=distance(state.player,character)<170;
+  const title=near?character.title.replace(/^The /,""):"";
+  const firstName=character.name.split(" ")[0];
+  const width=near?190:96;
+  ctx.save();
+  ctx.fillStyle="rgba(23,60,45,.92)";roundRect(character.x-width/2,character.y+10,width,near?42:25,10);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 11px Nunito";ctx.textAlign="center";
+  ctx.fillText(firstName,character.x,character.y+27);
+  if(near){
+    ctx.fillStyle="#f8d577";ctx.font="800 9px Nunito";
+    ctx.fillText(title.toUpperCase(),character.x,character.y+43);
+  }
+  ctx.restore();
+}
+
+function drawDiningCharacterBubble(character) {
+  const maxWidth=character.sprite==="elena"?138:220;
+  const x=clamp(character.x,130,DINING_CENTER_ZONE.width-130);
+  const y=character.y-DINING_CHARACTER_SPRITE_HEIGHT-56;
+  ctx.save();
+  ctx.fillStyle="rgba(255,253,246,.97)";roundRect(x-maxWidth/2,y,maxWidth,44,13);ctx.fill();
+  ctx.strokeStyle="rgba(49,84,64,.32)";ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(character.x-8,y+44);ctx.lineTo(character.x+7,y+44);ctx.lineTo(character.x,y+55);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="#315440";ctx.font="900 11px Nunito";ctx.textAlign="center";
+  wrapCanvasText(ctx,character.line,x,y+18,maxWidth-20,13,2);
+  ctx.restore();
+}
+
+function drawDiningCharacterWarning(character) {
+  const pulse=Math.sin(state.elapsed*12)*.5+.5;
+  ctx.save();
+  ctx.strokeStyle=`rgba(139,0,0,${.55+pulse*.4})`;ctx.lineWidth=5+pulse*3;
+  ctx.beginPath();ctx.arc(character.x,character.y-44,55+pulse*8,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle="#8b0000";ctx.beginPath();ctx.arc(character.x+48,character.y-98,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 18px Nunito";ctx.textAlign="center";ctx.fillText("!",character.x+48,character.y-92);
+  ctx.restore();
 }
 
 function drawDiningCenterRoom() {
@@ -1085,7 +1390,6 @@ function drawDiningCenterRoom() {
   ctx.fillStyle="#c9ad84";ctx.fillRect(0,0,DINING_CENTER_ZONE.width,62);ctx.fillRect(0,DINING_CENTER_ZONE.height-62,DINING_CENTER_ZONE.width,62);
   ctx.fillStyle="#a6815e";ctx.fillRect(0,0,58,DINING_CENTER_ZONE.height);ctx.fillRect(DINING_CENTER_ZONE.width-58,0,58,DINING_CENTER_ZONE.height);
   drawDiningEntrance();
-  drawDiningWallDetails();
   ctx.fillStyle="#6a0000";ctx.font="900 28px Fraunces, Georgia";ctx.textAlign="left";ctx.fillText("DINING CENTER DASH",110,122);
   ctx.fillStyle="#5f4a35";ctx.font="900 15px Nunito";ctx.fillText("Snack mission in progress",112,150);
 }
@@ -1104,6 +1408,33 @@ function drawDiningCenterFloorDetails() {
   [[525,1260],[1185,1120],[1550,860],[1940,620],[760,455],[1020,1320]].forEach(([x,y],i)=>{
     ctx.beginPath();ctx.arc(x,y,3+(i%2),0,Math.PI*2);ctx.fill();
   });
+  ctx.restore();
+}
+
+function drawDiningCenterLighting() {
+  const visual=state.zone?.visual;
+  if(!visual)return;
+  ctx.save();
+  ctx.globalAlpha=.9*visual.roomLight;
+  const lightPools=[
+    { x:540,y:360,rx:430,ry:250,color:"rgba(255,225,157,.2)",level:visual.snackLight },
+    { x:1150,y:360,rx:340,ry:240,color:"rgba(255,236,188,.22)",level:visual.soupLight },
+    { x:1810,y:360,rx:410,ry:250,color:"rgba(255,214,135,.24)",level:visual.cookieLight },
+    { x:1220,y:930,rx:720,ry:500,color:"rgba(255,249,224,.09)",level:1 }
+  ];
+  lightPools.forEach(light=>{
+    const gradient=ctx.createRadialGradient(light.x,light.y,0,light.x,light.y,light.rx);
+    gradient.addColorStop(0,light.color);
+    gradient.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.globalAlpha=.92*light.level*visual.roomLight;
+    ctx.fillStyle=gradient;
+    ctx.beginPath();ctx.ellipse(light.x,light.y,light.rx,light.ry,0,0,Math.PI*2);ctx.fill();
+  });
+  const edge=ctx.createRadialGradient(1200,760,350,1200,760,1320);
+  edge.addColorStop(.55,"rgba(49,84,64,0)");
+  edge.addColorStop(1,"rgba(45,50,35,.16)");
+  ctx.globalAlpha=visual.roomLight;
+  ctx.fillStyle=edge;ctx.fillRect(0,0,DINING_CENTER_ZONE.width,DINING_CENTER_ZONE.height);
   ctx.restore();
 }
 
@@ -1165,8 +1496,15 @@ function drawDiningTrayRack(x,y) {
 
 function drawDiningCounter(counter) {
   if(counter.label==="TRAY RETURN")return;
+  const visual=state.zone?.visual;
+  const stationLight=counter.label==="SNACK LINE"?visual?.snackLight:counter.label==="SOUP?"?visual?.soupLight:visual?.cookieLight;
   ctx.save();
+  if(stationLight){
+    ctx.shadowColor=counter.label==="COOKIE WATCH"?"#ffe38a":"#fff1bd";
+    ctx.shadowBlur=18*stationLight;
+  }
   ctx.fillStyle="rgba(56,42,31,.22)";roundRect(counter.x+8,counter.y+10,counter.w,counter.h,10);ctx.fill();
+  ctx.shadowBlur=0;
   ctx.fillStyle="#a47d55";roundRect(counter.x,counter.y,counter.w,counter.h,10);ctx.fill();
   ctx.strokeStyle="#704f35";ctx.lineWidth=4;ctx.stroke();
   ctx.fillStyle="#f2dfbd";roundRect(counter.x+16,counter.y+18,counter.w-32,38,8);ctx.fill();
@@ -1205,7 +1543,7 @@ function drawCookieWatchProps(counter) {
   ctx.fillStyle="#b65b43";ctx.beginPath();ctx.arc(counter.x+counter.w-34,counter.y+43,7,0,Math.PI*2);ctx.fill();
 }
 
-function drawDiningTable(table) {
+function drawDiningTable(table,index) {
   ctx.save();
   drawDiningChairs(table);
   ctx.fillStyle="rgba(56,42,31,.2)";roundRect(table.x+8,table.y+9,table.w,table.h,16);ctx.fill();
@@ -1217,7 +1555,56 @@ function drawDiningTable(table) {
   if((table.x+table.y)%3===0)drawFoodTray(table.x+table.w/2,table.y+table.h/2,.78);
   ctx.fillStyle="rgba(255,241,189,.55)";
   [[table.x+table.w*.42,table.y+28],[table.x+table.w*.66,table.y+table.h-24]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
+  drawDiningTableStory(table,index);
   ctx.restore();
+}
+
+function drawDiningTableStory(table,index) {
+  const cx=table.x+table.w/2,cy=table.y+table.h/2;
+  if(index===0){
+    drawDiningCup(cx+25,cy-15,"#6a0000");
+    drawDiningNapkin(cx-30,cy+18,.22);
+  } else if(index===2){
+    drawDiningBackpack(table.x+table.w-16,table.y+table.h+6,"#315440");
+  } else if(index===4){
+    drawDiningCup(cx-5,cy+4,"#315440");
+    drawDiningNapkin(cx+35,cy-12,-.3);
+  } else if(index===6){
+    drawDiningNametag(cx,cy,"'96");
+  } else if(index===8){
+    drawFoodTray(cx-8,cy,.9);
+    drawDiningCup(cx+40,cy+8,"#b65b43");
+    drawDiningNapkin(cx-42,cy-14,.45);
+  }
+}
+
+function drawDiningCup(x,y,color) {
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle=color;roundRect(-7,-9,14,18,4);ctx.fill();
+  ctx.strokeStyle="#fff7d8";ctx.lineWidth=2;ctx.beginPath();ctx.arc(8,0,5,-Math.PI/2,Math.PI/2);ctx.stroke();
+  ctx.fillStyle="rgba(255,247,216,.75)";ctx.fillRect(-5,-6,10,3);ctx.restore();
+}
+
+function drawDiningNapkin(x,y,angle=0) {
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.fillStyle="#f7efd9";ctx.beginPath();ctx.moveTo(-10,-7);ctx.lineTo(11,-4);ctx.lineTo(7,8);ctx.lineTo(-12,5);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="rgba(112,79,53,.16)";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+}
+
+function drawDiningBackpack(x,y,color) {
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle="rgba(56,42,31,.18)";ctx.beginPath();ctx.ellipse(3,12,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=color;roundRect(-15,-18,30,34,9);ctx.fill();
+  ctx.strokeStyle="#263930";ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,-17,10,Math.PI,0);ctx.stroke();
+  ctx.fillStyle="#f8d577";roundRect(-8,-2,16,8,3);ctx.fill();ctx.restore();
+}
+
+function drawDiningNametag(x,y,text) {
+  ctx.save();ctx.translate(x,y);ctx.rotate(-.08);
+  ctx.fillStyle="#fffdf6";roundRect(-25,-14,50,28,5);ctx.fill();
+  ctx.strokeStyle="#6a0000";ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle="#6a0000";ctx.font="900 11px Nunito";ctx.textAlign="center";ctx.fillText(text,0,4);ctx.restore();
 }
 
 function drawDiningChairs(table) {
@@ -1262,14 +1649,48 @@ function drawDiningSnack(snack) {
 
 function drawDiningCookie(cookie) {
   if(cookie.collected)return;
-  const pulse=1+Math.sin(state.elapsed*6)*.08;
+  const pulse=1+Math.sin(state.elapsed*6)*.08,near=distance(state.player,cookie)<150;
   ctx.save();ctx.translate(cookie.x,cookie.y);ctx.scale(pulse,pulse);
   ctx.shadowColor="#ffe38a";ctx.shadowBlur=28;
   ctx.strokeStyle="rgba(255,241,189,.72)";ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,42,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.fill();
   ctx.shadowBlur=0;ctx.strokeStyle="#7b4b2d";ctx.lineWidth=4;ctx.stroke();
   ctx.fillStyle="#5a3525";[[-12,-8],[8,-5],[-3,11],[14,12],[1,-1],[-16,8]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
-  ctx.fillStyle="#fff8d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("DC",0,4);ctx.restore();
+  ctx.fillStyle="#fff8d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("DC",0,4);
+  const sparkle=state.elapsed*2.4;
+  [[Math.cos(sparkle)*47,Math.sin(sparkle)*35],[Math.cos(sparkle+Math.PI)*47,Math.sin(sparkle+Math.PI)*35]].forEach(([x,y])=>{
+    ctx.fillStyle="#fff1a8";ctx.beginPath();ctx.moveTo(x,y-7);ctx.lineTo(x+3,y-2);ctx.lineTo(x+8,y);ctx.lineTo(x+3,y+2);ctx.lineTo(x,y+7);ctx.lineTo(x-3,y+2);ctx.lineTo(x-8,y);ctx.lineTo(x-3,y-2);ctx.closePath();ctx.fill();
+  });
+  if(near){
+    ctx.fillStyle="rgba(106,0,0,.94)";roundRect(-55,-72,110,25,10);ctx.fill();
+    ctx.fillStyle="#fff7d8";ctx.font="900 10px Nunito";ctx.fillText("LEGENDARY",0,-55);
+  }
+  ctx.restore();
+}
+
+function drawDiningCookieTrail() {
+  if(state.zone.cookieCollected)return;
+  const cookie=state.zone.cookie;
+  ctx.save();
+  for(let i=0;i<7;i++){
+    const t=i/6,x=cookie.x-390+t*330,y=cookie.y+230-t*190;
+    const flicker=.45+.35*Math.sin(state.elapsed*4+i);
+    ctx.globalAlpha=flicker;
+    ctx.fillStyle=i%2?"#c98745":"#ffe38a";
+    ctx.beginPath();ctx.arc(x,y,4+(i%3),0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDiningCookieBurst() {
+  const burst=state.zone?.visual?.cookieBurst;
+  if(!burst?.active)return;
+  ctx.save();ctx.translate(burst.x,burst.y);ctx.rotate(burst.spin);ctx.scale(burst.scale,burst.scale);ctx.globalAlpha=burst.alpha;
+  ctx.shadowColor="#ffe38a";ctx.shadowBlur=28*burst.glow;
+  ctx.fillStyle="#c98745";ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#fff1bd";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#5a3525";[[-12,-8],[8,-5],[-3,11],[14,12],[1,-1],[-16,8]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
+  ctx.restore();
 }
 
 function drawDiningCoffee(coffee) {
@@ -1287,10 +1708,24 @@ function drawDiningCoffee(coffee) {
 
 function drawDiningExit() {
   const exit=DINING_CENTER_ZONE.exit,ready=state.zone.cookieCollected&&state.zone.snacksCollected>=DINING_CENTER_ZONE.requiredSnacks;
-  const pulse=Math.sin(state.elapsed*5)*.5+.5;
+  const visual=state.zone.visual,pulse=Math.sin(state.elapsed*5)*.5+.5;
   ctx.save();
+  if(visual.lightSweep>0){
+    const sweepX=exit.x-540+visual.lightSweep*520;
+    const gradient=ctx.createLinearGradient(sweepX-170,0,sweepX+170,0);
+    gradient.addColorStop(0,"rgba(202,255,117,0)");gradient.addColorStop(.5,`rgba(226,255,172,${.34*visual.lightSweep})`);gradient.addColorStop(1,"rgba(202,255,117,0)");
+    ctx.fillStyle=gradient;ctx.beginPath();ctx.moveTo(exit.x,exit.y);ctx.lineTo(sweepX-190,exit.y+170);ctx.lineTo(sweepX+190,exit.y+170);ctx.closePath();ctx.fill();
+  }
   ctx.fillStyle="#6f563f";roundRect(exit.x-105,exit.y-72,210,144,20);ctx.fill();
   ctx.fillStyle=ready?"#dff0b4":"#725842";roundRect(exit.x-82,exit.y-50,164,100,14);ctx.fill();
+  if(ready){
+    ctx.save();ctx.translate(exit.x+54*visual.doorOpen,exit.y);ctx.rotate(-.08*visual.doorOpen);
+    ctx.fillStyle="#315440";roundRect(-65,-45,130,90,10);ctx.fill();
+    ctx.fillStyle="#f8d577";ctx.beginPath();ctx.arc(-48,2,5,0,Math.PI*2);ctx.fill();ctx.restore();
+    const hall=ctx.createRadialGradient(exit.x,exit.y,10,exit.x,exit.y,150);
+    hall.addColorStop(0,`rgba(226,255,172,${.5*visual.exitGlow})`);hall.addColorStop(1,"rgba(202,255,117,0)");
+    ctx.fillStyle=hall;ctx.beginPath();ctx.arc(exit.x,exit.y,150,0,Math.PI*2);ctx.fill();
+  }
   ctx.fillStyle="#315440";roundRect(exit.x-53,exit.y-83,106,28,8);ctx.fill();
   ctx.fillStyle="#fff7d8";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText("EXIT",exit.x,exit.y-63);
   ctx.strokeStyle=ready?"#caff75":"rgba(255,253,246,.6)";
@@ -1298,9 +1733,10 @@ function drawDiningExit() {
   ctx.beginPath();ctx.arc(exit.x,exit.y,exit.radius+pulse*8,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle=ready?"rgba(202,255,117,.26)":"rgba(255,253,246,.18)";
   ctx.beginPath();ctx.arc(exit.x,exit.y,exit.radius,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#315440";roundRect(exit.x-72,exit.y-18,144,36,16);ctx.fill();
-  ctx.fillStyle="#fff7d8";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText(ready?"ESCAPE!":"EXIT LOCKED",exit.x,exit.y+5);
-  ctx.restore();
+  ctx.save();ctx.translate(exit.x,exit.y);ctx.scale(visual.exitLabelScale,visual.exitLabelScale);
+  ctx.fillStyle="#315440";roundRect(-72,-18,144,36,16);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 15px Nunito";ctx.textAlign="center";ctx.fillText(ready?"ESCAPE!":"EXIT LOCKED",0,5);
+  ctx.restore();ctx.restore();
 }
 
 function drawDiningHazard(h) {
@@ -1342,7 +1778,7 @@ function drawDiningCenterObjective() {
   ctx.fillStyle="#6a0000";ctx.font="900 13px Nunito";ctx.fillText("Dining Center Dash",x+16,y+24);
   ctx.fillStyle="#315440";ctx.font="900 16px Nunito";ctx.fillText(`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks}`,x+16,y+50);
   ctx.fillStyle=state.zone.bonks>=2?"#8b2e22":"#315440";ctx.fillText(`Bonks ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}`,x+154,y+50);
-  ctx.fillStyle=state.zone.cookieCollected?"#315440":"#8a6b3f";ctx.font="900 13px Nunito";ctx.fillText(state.zone.cookieCollected?"Cookie secured. Find the exit.":"Grab the legendary DC Cookie.",x+18,y+73);
+  ctx.fillStyle=state.zone.cookieCollected?"#315440":"#8a6b3f";ctx.font="900 13px Nunito";ctx.fillText(getDiningCenterObjectiveText(),x+18,y+73);
   ctx.restore();
 }
 
@@ -1787,6 +2223,7 @@ function drawCapePowerup() {
 }
 
 function drawHazard(h) {
+  if(h.finished)return;
   if(h.type==="bus") {
     drawBlueBus(h);
     return;
@@ -1856,6 +2293,10 @@ function drawBusWheel(x,y) {
 }
 
 function drawStudentHazard(h) {
+  if(h.character==="dave"){
+    drawDaveCampusHazard(h);
+    return;
+  }
   const step=Math.sin(state.elapsed*9+h.offset)*4;
   ctx.strokeStyle="rgba(35,47,39,.72)";ctx.lineWidth=7;ctx.lineCap="round";
   ctx.beginPath();ctx.moveTo(-6,15);ctx.lineTo(-10,27+step);ctx.moveTo(6,15);ctx.lineTo(11,27-step);ctx.stroke();
@@ -1869,6 +2310,29 @@ function drawStudentHazard(h) {
   ctx.fillStyle=h.hair;ctx.beginPath();ctx.arc(0,-21,9,Math.PI,0);ctx.fill();
   ctx.fillStyle="#24322d";ctx.beginPath();ctx.arc(-3,-18,1.4,0,Math.PI*2);ctx.arc(4,-18,1.4,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle="#f3e3c3";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-11,0);ctx.lineTo(-18,10+step*.25);ctx.moveTo(11,0);ctx.lineTo(18,9-step*.25);ctx.stroke();
+}
+
+function drawDaveCampusHazard(h) {
+  const step=Math.sin(state.elapsed*9+h.offset)*2.2;
+  ctx.save();
+  ctx.rotate(-(h.angle||0));
+  ctx.translate(0,step);
+  if(daveSprite?.complete&&daveSprite.naturalWidth){
+    ctx.drawImage(daveSprite,-25,-56,50,72);
+  } else {
+    ctx.fillStyle="#1f3d58";roundRect(-13,-10,26,31,7);ctx.fill();
+    ctx.fillStyle="#e3ad88";ctx.beginPath();ctx.arc(0,-20,11,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#f4f4f1";roundRect(-13,-32,26,8,4);ctx.fill();
+    ctx.strokeStyle="#e1b83f";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-7,8,0,Math.PI);ctx.stroke();
+  }
+  ctx.fillStyle="rgba(23,60,45,.92)";roundRect(-28,18,56,20,8);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("Dave",0,31);
+  if(distance(state.player,h)<125){
+    ctx.fillStyle="rgba(255,253,246,.96)";roundRect(-62,-82,124,26,10);ctx.fill();
+    ctx.strokeStyle="rgba(49,84,64,.28)";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="#315440";ctx.font="900 9px Nunito";ctx.fillText(h.situation,0,-65);
+  }
+  ctx.restore();
 }
 
 function drawBikeHazard(h) {
@@ -2116,7 +2580,7 @@ function updateProfessorBoltz(dt) {
 }
 
 function maybePlaySbsGreeting(passerby) {
-  if(!state.running || state.sbsGreetingPlayed || state.muted)return;
+  if(!state.running || state.sbsGreetingPlayed || state.muted || passerby.finished)return;
   if(passerby.type !== "student")return;
   if(distance(state.player, passerby) > SBS_GREETING_DISTANCE)return;
   const voice = getVoiceSound("sbsGreeting");
@@ -2149,6 +2613,8 @@ function drawProfessorBoltz() {
   } else {
     drawProfessorBoltzFallback(prof);
   }
+  ctx.fillStyle="rgba(23,60,45,.92)";roundRect(-42,17,84,20,8);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("Professor Boltz",0,30);
   if(prof.dwellLeft>0){
     ctx.scale(prof.facing,1);
     ctx.fillStyle="rgba(255,253,246,.92)";roundRect(14,-68,68,23,10);ctx.fill();
@@ -2372,8 +2838,8 @@ function updateHud(){
   mobileZoneButton.classList.toggle("show",showMobileZoneButton);
   if(state.mode === MODE_DINING_CENTER && state.zone){
     document.getElementById("tourKicker").textContent=`DC snacks ${state.zone.snacksCollected} / ${DINING_CENTER_ZONE.requiredSnacks}`;
-    document.getElementById("mobileDestination").textContent=state.zone.cookieCollected?"Reach the DC exit":"Find the DC Cookie";
-    document.getElementById("mobilePlayTip").textContent="Collect snacks • Grab the DC Cookie • Find the exit";
+    document.getElementById("mobileDestination").textContent=getDiningCenterObjectiveText();
+    document.getElementById("mobilePlayTip").textContent=`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks} • Cookie ${state.zone.cookieCollected?"secured":"needed"}`;
   } else {
     document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
     const chapter=trailChapters[state.chapterIndex];
@@ -2609,6 +3075,16 @@ function initStartButtonBounce() {
 function loadSpriteAssets() {
   professorBoltzSprite=new Image();
   professorBoltzSprite.src="assets/marilyn-boltz-professor-sprite.svg";
+  daveSprite=new Image();
+  daveSprite.src="assets/student-brooklyn-kid-craig-sprite.svg";
+  [
+    ["arjun","assets/student-dc-veteran-sprite.svg"],
+    ["maggie","assets/student-library-regular-sprite.svg"],
+    ["elena","assets/student-bico-cross-registrant-sprite.svg"]
+  ].forEach(([id,src])=>{
+    diningCharacterSprites[id]=new Image();
+    diningCharacterSprites[id].src=src;
+  });
 }
 
 window.addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());});

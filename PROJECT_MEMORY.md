@@ -519,3 +519,49 @@ Session notes will be appended here as the game evolves.
   - Plan the first implementation slice around `Founders Green Acorn Dash`.
   - Keep the first slice small: one entry marker, one zone, one completion condition, one return flow.
   - Decide whether to extend the current canvas architecture first or create a migration plan toward Phaser after validating the hub-zone loop.
+
+## 2026-06-16 - Dining Center mobile entry and visual polish production push
+
+- Date/time
+  - 2026-06-16, America/New_York.
+- Feature name, work name, description, and value provided
+  - Improved the mobile entry flow for the Dining Center zone so touch players no longer need a keyboard `Enter` / `Space` action.
+  - Reworked the mobile call-to-action from a vague `Raid DC` button into an action-first prompt: `Tap to enter the DC`, with `Dining Center Dash` as supporting context.
+  - Significantly upgraded Dining Center Dash visuals while preserving the same rounded, warm, canvas-drawn style as the main campus map.
+  - Pushed the finished update to production on `main`.
+  - Production commits:
+    - `9a47d41` (`Add mobile DC zone entry button`)
+    - `fcf05a2` (`Polish Dining Center visuals and mobile entry CTA`)
+- Files changed
+  - `index.html`
+  - `styles.css`
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+- Technical Architecture changes or key technical decisions made
+  - Added a mobile-only `mobileZoneButton` that appears when SBS is near the Dining Center marker and calls the same `enterDiningCenterZone()` flow as desktop keyboard input.
+  - Kept gameplay rules, collision zones, snack counts, bonk limits, and timing unchanged during the graphics pass.
+  - Added named canvas rendering helpers for Dining Center room identity and props, including floor details, entrance/exit framing, menu boards, bins, condiment station, tray rack, food station props, chairs, plates, and food trays.
+  - Upgraded Dining Center pickups and hazards through rendering only: food-themed snack acorns, stronger DC Cookie hero glow, clearer coffee steam, and more readable sliding tray hazards.
+  - Made the Dining Center objective card camera-aware on desktop and removed the duplicate canvas objective card on mobile so mobile relies on the existing mobile HUD/tip system.
+- Assumptions
+  - `main` remains the production branch and production deploys from `origin/main`.
+  - Mobile players need explicit touch actions for zone entry, not keyboard-only prompts.
+  - Dining Center Dash should prove the hub-to-zone loop before expanding to more zones.
+  - The DC scene should feel richer and more place-specific without becoming visually separate from the main campus game.
+- Known limitations
+  - Visual QA was done through Playwright screenshots, but real-device mobile playtesting is still recommended.
+  - The DC visual pass adds a lot of canvas helpers inside the already-large `script.js`; future zones may require modularization to keep maintenance manageable.
+  - The previous `2026-06-14` memory entry is now stale where it says no hub/zone code exists; Dining Center Dash is now implemented and live.
+- Key learnings that you can bring with you to future sessions
+  - Primary mobile CTA copy should be a clear verb phrase; `Tap to enter the DC` tested clearer than a title-like `Enter DC Dash`.
+  - For zoomed-in campus zones, improve place identity through recognizable stations, props, and object silhouettes before adding mechanics.
+  - Decorative DC details should remain lower contrast than pickups, hazards, and exit cues.
+  - Mobile can need a simpler HUD strategy than desktop; duplicating canvas objective cards on top of mobile DOM HUD can create clutter.
+- Remaining TODOs
+  - Playtest Dining Center Dash on a real phone for readability, clutter, and touch comfort.
+  - Confirm the DC Cookie, snack pickups, sliding trays, and exit remain easy to identify during motion.
+  - Consider a `DC Cookie Secured` or `Tray Traffic Survivor` reward/badge moment after the zone is cleared.
+  - Consider modularizing Dining Center rendering helpers if more zones are added.
+- Next steps
+  - Run a focused QA pass on Dining Center Dash after production deploy completes.
+  - If the zone feels good, decide whether to add a small zone-clear reward moment or start the next campus zone.

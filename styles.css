@@ -122,6 +122,15 @@ canvas { display: block; width: 100%; height: 100%; }
 .campus-glide.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .campus-glide span { font-family: "Fraunces", serif; font-size: clamp(21px, 3vw, 35px); }
 .campus-glide strong { margin-top: 3px; color: #f8d577; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+.dc-zone-intro {
+  position: absolute; left: 50%; top: 22%; z-index: 7; display: grid; min-width: min(460px, calc(100% - 40px));
+  justify-items: center; padding: 13px 22px 12px; opacity: 0; visibility: hidden; color: #fff9dc;
+  border: 2px solid rgba(255,247,216,.72); border-radius: 8px; background: rgba(23,60,45,.92);
+  box-shadow: 0 8px 24px rgba(13,40,31,.24); pointer-events: none; text-align: center;
+  transform: translate(-50%, 18px) scale(.94);
+}
+.dc-zone-intro span { font-family: var(--brand-serif); font-size: 27px; font-weight: 900; }
+.dc-zone-intro strong { margin-top: 3px; color: #f8d577; font-size: 11px; letter-spacing: .6px; text-transform: uppercase; }
 .story-beat {
   position: absolute; left: 42%; top: 45%; opacity: 0; visibility: hidden; color: #fffdf6; text-align: center;
   pointer-events: none; transform: translate(-50%, -50%) scale(.85); transition: .25s ease;
@@ -321,6 +330,9 @@ button { font: inherit; }
     padding: 5px 9px; color: #fff9d7; border-radius: 999px; background: rgba(23,60,45,.72);
     font-size: 8px; font-weight: 900; letter-spacing: .25px; pointer-events: none; transform: translateX(-50%);
   }
+  .dc-zone-intro { top: 18%; min-width: min(390px, calc(100% - 28px)); padding: 9px 15px; }
+  .dc-zone-intro span { font-size: 20px; }
+  .dc-zone-intro strong { font-size: 8px; }
   .mobile-zone-button {
     position: absolute; left: 50%; bottom: calc(42px + env(safe-area-inset-bottom)); z-index: 6;
     align-items: center; justify-content: center; gap: 10px; min-width: 210px; min-height: 56px; padding: 6px 18px 7px 11px;

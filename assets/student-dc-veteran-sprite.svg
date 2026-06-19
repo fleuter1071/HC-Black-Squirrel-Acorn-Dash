@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 260" role="img" aria-labelledby="title desc">
+  <title id="title">Arjun Shah — The Dining Center Veteran</title>
+  <desc id="desc">Arjun Shah, the Dining Center Veteran: a stylized South Asian man student with wavy dark hair, light stubble, Haverford-red sweatshirt, khaki pants, and a loaded dining tray.</desc>
+  <defs>
+    <linearGradient id="sweatshirt" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#9c2038"/><stop offset="1" stop-color="#590718"/></linearGradient>
+    <linearGradient id="hair" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#32231d"/><stop offset="1" stop-color="#151313"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#101815" flood-opacity=".24"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <ellipse cx="90" cy="239" rx="43" ry="12" fill="#132019" opacity=".22"/>
+    <path d="M41 158c14-20 31-29 51-29 22 0 40 10 54 31l24 78H10Z" fill="url(#sweatshirt)"/>
+    <path d="M61 145h61l14 92H47Z" fill="url(#sweatshirt)"/>
+    <path d="M78 164h25v31H78Z" fill="#fff1bd"/><text x="90.5" y="187" text-anchor="middle" font-family="Georgia,serif" font-size="25" font-weight="900" fill="#8b0000">H</text>
+    <path d="M55 67c6-23 20-36 39-36 21 0 36 14 41 39 4 22-1 47-12 63-9 13-20 20-33 20-15 0-27-8-36-22-10-16-13-42 1-64Z" fill="#b97952"/>
+    <path d="M52 72c7-30 23-47 44-47 21 0 37 18 41 49-13-11-27-17-42-17-17 0-31 5-43 15Z" fill="url(#hair)"/>
+    <path d="M55 52c9-17 21-26 36-28l-3 13 13-14 2 14 13-12 1 17 14-8-4 24Z" fill="#171313"/>
+    <path d="M62 100c7-4 14-4 22 0M101 100c7-4 14-3 21 1" fill="none" stroke="#654134" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="110" rx="3.5" ry="4.3" fill="#2b2824"/><ellipse cx="112" cy="110" rx="3.5" ry="4.3" fill="#2b2824"/>
+    <path d="M92 112c-2 8-5 14-9 18 5 3 11 3 17 0" fill="none" stroke="#8f563f" stroke-width="3" stroke-linecap="round"/>
+    <path d="M78 141c9 7 19 7 29 0" fill="none" stroke="#75403c" stroke-width="3" stroke-linecap="round"/>
+    <g stroke="#75463b" stroke-width="2" stroke-linecap="round" opacity=".75"><path d="M72 132l3 3M79 135l3 2M105 135l3-2M112 132l3-3"/></g>
+    <path d="M47 168c-10 10-15 21-18 34M135 168c10 10 16 21 19 34" fill="none" stroke="#b97952" stroke-width="8" stroke-linecap="round"/>
+    <g transform="translate(91 199)">
+      <rect x="-67" y="-14" width="134" height="42" rx="8" fill="#d7d2c4" stroke="#737a73" stroke-width="4"/>
+      <circle cx="-38" cy="5" r="15" fill="#f4edd8" stroke="#c8b997" stroke-width="3"/><path d="M-48 5c7-7 14-7 21 0" fill="none" stroke="#8fb36d" stroke-width="5"/>
+      <rect x="-8" y="-7" width="30" height="23" rx="5" fill="#8fb36d"/><circle cx="37" cy="6" r="12" fill="#fff4d2" stroke="#7a5132" stroke-width="3"/>
+      <path d="M48 3c9-2 11 10 2 13" fill="none" stroke="#fff4d2" stroke-width="4"/><circle cx="59" cy="-2" r="11" fill="#c98745"/><g fill="#5a3525"><circle cx="56" cy="-5" r="2"/><circle cx="62" cy="0" r="2"/><circle cx="56" cy="3" r="2"/></g>
+    </g>
+    <path d="M68 226l-10 25M111 226l11 25" stroke="#a58b60" stroke-width="10" stroke-linecap="round"/><path d="M52 252h22M112 252h22" stroke="#f1f0e8" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 260" role="img" aria-labelledby="title desc">
+  <title id="title">Elena Cruz — The Bi-Co Cross-Registrant</title>
+  <desc id="desc">Elena Cruz, the Bi-Co Cross-Registrant: a stylized Latina student with a long side braid, Bryn Mawr-blue jacket, Haverford-red shirt, tote bag, Blue Bus schedule, travel coffee, and hurried walking pose.</desc>
+  <defs>
+    <linearGradient id="jacket" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#4d91c7"/>
+      <stop offset="1" stop-color="#24547d"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#493027"/>
+      <stop offset="1" stop-color="#1d1715"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#101815" flood-opacity=".24"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <ellipse cx="90" cy="239" rx="43" ry="12" fill="#132019" opacity=".22"/>
+
+    <path d="M39 73c5-40 28-65 57-65 31 0 54 24 58 63 4 35-5 69-26 98H58C37 144 31 108 39 73Z" fill="url(#hair)"/>
+    <path d="M42 158c14-20 31-29 50-29 22 0 40 10 54 31l24 78H10Z" fill="url(#jacket)"/>
+    <path d="M69 145h44l11 92H55Z" fill="#8b0000"/>
+    <path d="M48 162l29-17 14 92H27Z" fill="url(#jacket)"/>
+    <path d="M136 162l-29-17-14 92h62Z" fill="url(#jacket)"/>
+    <path d="M72 147l19 25 19-25" fill="#f2d1b5"/>
+
+    <path d="M55 67c6-23 20-36 39-36 21 0 36 14 41 39 4 22-1 47-12 63-9 13-20 20-33 20-15 0-27-8-36-22-10-16-13-42 1-64Z" fill="#c8865c"/>
+    <path d="M52 73c7-31 23-48 44-48 21 0 37 18 41 49-13-11-27-17-42-17-17 0-31 5-43 16Z" fill="url(#hair)"/>
+    <path d="M53 58c-10 29-9 62 2 96" fill="none" stroke="#2b201c" stroke-width="11" stroke-linecap="round"/>
+    <path d="M133 56c10 24 12 48 7 73" fill="none" stroke="#291e1a" stroke-width="11" stroke-linecap="round"/>
+
+    <path d="M62 100c7-4 14-4 22 0M101 100c7-4 14-3 21 1" fill="none" stroke="#694236" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="110" rx="3.6" ry="4.4" fill="#29211d"/>
+    <ellipse cx="112" cy="110" rx="3.6" ry="4.4" fill="#29211d"/>
+    <circle cx="75.4" cy="108.5" r="1.2" fill="#fff"/>
+    <circle cx="113.4" cy="108.5" r="1.2" fill="#fff"/>
+    <path d="M92 112c-2 8-5 14-9 18 5 3 11 3 17 0" fill="none" stroke="#955f49" stroke-width="3" stroke-linecap="round"/>
+    <path d="M79 142c8 5 18 5 27-1" fill="none" stroke="#854448" stroke-width="3" stroke-linecap="round"/>
+
+    <path d="M132 75c18 19 20 42 10 67-5 13-5 26 0 39" fill="none" stroke="#35251f" stroke-width="11" stroke-linecap="round"/>
+    <g fill="#35251f">
+      <ellipse cx="142" cy="111" rx="8" ry="10" transform="rotate(13 142 111)"/>
+      <ellipse cx="140" cy="130" rx="8" ry="10" transform="rotate(-10 140 130)"/>
+      <ellipse cx="143" cy="150" rx="7" ry="10" transform="rotate(12 143 150)"/>
+      <ellipse cx="141" cy="170" rx="7" ry="10" transform="rotate(-9 141 170)"/>
+    </g>
+
+    <path d="M48 169c-11 9-18 20-23 34" fill="none" stroke="#c8865c" stroke-width="8" stroke-linecap="round"/>
+    <path d="M136 168c11 10 19 22 24 35" fill="none" stroke="#c8865c" stroke-width="8" stroke-linecap="round"/>
+
+    <path d="M49 161c30 14 58 39 83 74" fill="none" stroke="#7f5a38" stroke-width="7" stroke-linecap="round"/>
+    <g transform="translate(106 186)">
+      <path d="M-11-1h47l-5 52h-40Z" fill="#e7d6b4" stroke="#74583b" stroke-width="3"/>
+      <path d="M-3-1c1-17 27-17 30 0" fill="none" stroke="#74583b" stroke-width="4"/>
+      <rect x="0" y="8" width="25" height="30" rx="3" fill="#f5f0df" transform="rotate(5 12 23)"/>
+      <path d="M5 15h15M5 21h17M5 27h12" stroke="#4d91c7" stroke-width="2"/>
+      <text x="13" y="35" text-anchor="middle" font-family="Arial,sans-serif" font-size="5" font-weight="900" fill="#8b0000">BI-CO</text>
+    </g>
+
+    <g transform="translate(16 183) rotate(-9)">
+      <rect x="0" y="0" width="43" height="48" rx="5" fill="#fffdf6" stroke="#315440" stroke-width="3"/>
+      <rect x="4" y="5" width="35" height="11" rx="3" fill="#4d91c7"/>
+      <path d="M8 23h26M8 30h20M8 37h26" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="21.5" y="13" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" font-weight="900" fill="#fff">BLUE BUS</text>
+    </g>
+
+    <g transform="translate(148 186)">
+      <path d="M-11-10h25l-3 35h-19Z" fill="#fff4d2" stroke="#6b3d25" stroke-width="3"/>
+      <path d="M-8-14h19" stroke="#315440" stroke-width="5"/>
+      <path d="M-4 2h11" stroke="#4d91c7" stroke-width="4"/>
+    </g>
+
+    <path d="M68 226l-10 25M111 226l11 25" stroke="#24262c" stroke-width="10" stroke-linecap="round"/>
+    <path d="M51 252h23M112 252h23" stroke="#44352f" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

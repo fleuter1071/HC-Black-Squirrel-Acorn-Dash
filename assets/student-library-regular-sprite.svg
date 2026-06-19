@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 260" role="img" aria-labelledby="title desc">
+  <title id="title">Maggie Doyle — The Library Regular</title>
+  <desc id="desc">Maggie Doyle, the Library Regular: a stylized white woman student with freckles, wavy red hair, burgundy cardigan, books, and takeaway coffee.</desc>
+  <defs>
+    <linearGradient id="hair" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#c76d3d"/><stop offset=".55" stop-color="#8d3e27"/><stop offset="1" stop-color="#55251c"/></linearGradient>
+    <linearGradient id="cardigan" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#8b2438"/><stop offset="1" stop-color="#4d1323"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#101815" flood-opacity=".24"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <ellipse cx="90" cy="239" rx="42" ry="11" fill="#132019" opacity=".22"/>
+    <path d="M38 70c4-37 27-61 56-62 32-1 55 23 59 63 4 39-7 73-30 101H58C37 145 30 108 38 70Z" fill="url(#hair)"/>
+    <path d="M42 158c14-20 31-29 50-29 22 0 40 10 54 31l24 78H10Z" fill="url(#cardigan)"/>
+    <path d="M70 144h43l10 93H57Z" fill="#b9d5e6"/>
+    <path d="M49 162l28-17 14 92H27ZM135 162l-28-17-14 92h61Z" fill="url(#cardigan)"/>
+    <path d="M55 67c6-23 20-36 39-36 21 0 36 14 41 39 4 22-1 47-12 63-9 13-20 20-33 20-15 0-27-8-36-22-10-16-13-42 1-64Z" fill="#f0bd9b"/>
+    <path d="M52 73c7-31 22-47 43-47 21 0 37 18 41 48-12-10-25-16-40-17-17-1-32 5-44 16Z" fill="url(#hair)"/>
+    <path d="M45 64c-10 26-10 58 0 93M138 63c11 28 11 61 0 96" fill="none" stroke="url(#hair)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M62 100c7-4 14-4 22 0M101 100c7-4 14-3 21 1" fill="none" stroke="#6c382b" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="110" rx="3.5" ry="4.3" fill="#37536a"/><ellipse cx="112" cy="110" rx="3.5" ry="4.3" fill="#37536a"/>
+    <path d="M92 112c-2 8-5 14-9 18 5 3 11 3 17 0" fill="none" stroke="#b77d65" stroke-width="3" stroke-linecap="round"/>
+    <path d="M78 142c9 6 19 6 29 0" fill="none" stroke="#9b4d50" stroke-width="3" stroke-linecap="round"/>
+    <g fill="#b87357"><circle cx="66" cy="121" r="1.5"/><circle cx="71" cy="124" r="1.3"/><circle cx="116" cy="123" r="1.4"/><circle cx="121" cy="120" r="1.3"/></g>
+    <path d="M49 169c-12 10-20 23-25 38M134 167c12 10 20 23 25 38" fill="none" stroke="#f0bd9b" stroke-width="8" stroke-linecap="round"/>
+    <g transform="translate(17 188) rotate(-6)"><rect x="0" y="16" width="39" height="28" rx="3" fill="#315440"/><rect x="4" y="7" width="38" height="27" rx="3" fill="#d3ad50"/><rect x="8" y="0" width="37" height="26" rx="3" fill="#7d263a"/><path d="M14 8h24M14 14h18" stroke="#fff1bd" stroke-width="2"/></g>
+    <g transform="translate(145 187)"><path d="M-11-10h25l-3 35h-19Z" fill="#fff4d2" stroke="#6b3d25" stroke-width="3"/><path d="M-8-14h19" stroke="#315440" stroke-width="5"/><path d="M-4 2h11" stroke="#8b0000" stroke-width="4"/></g>
+    <path d="M68 225l-10 26M111 225l11 26" stroke="#292531" stroke-width="9" stroke-linecap="round"/><path d="M52 252h22M112 252h22" stroke="#3a2b28" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>
