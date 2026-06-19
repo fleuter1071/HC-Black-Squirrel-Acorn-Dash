@@ -191,7 +191,7 @@ const hazardRoutes = [
   {
     type:"student", style:"dave", character:"dave", name:"Dave", situation:"Blue Bus. Pizza mission.",
     speed:68, radius:18, oneWay:true,
-    points:[[1260,760],[1010,714],[945,540],[790,445],[620,405],[520,300],[620,230],[760,250],[840,260],[930,270],[1010,250]],
+    points:[[1260,760],[1010,714],[945,540],[790,445],[620,405],[520,300],[620,230],[760,250],[840,260],[930,270],[1010,250],[1200,245],[1400,238],[1580,232],[1700,228]],
     offset:1.8
   },
   { type:"student", style:"books", color:"#e0a539", skin:"#c98e70", hair:"#a05d38", speed:74, radius:18, points:[[410,650],[680,705],[810,615],[550,535]], offset:3.4 },
@@ -213,7 +213,7 @@ let lastTime = 0;
 let toastTimer;
 let storyTimer;
 let countdownTimer;
-let professorBoltzSprite;
+let tomKessingerSprite;
 let daveSprite;
 const diningCharacterSprites = {};
 const keys = new Set();
@@ -811,15 +811,15 @@ function moveHazard(h, dt) {
   const scale=getDifficultyScale(h.type);
   h.progress += h.speed * scale * dt / len;
   if (h.progress >= 1) {
-    h.progress -= 1;
-    h.segment = (h.segment + 1) % h.points.length;
-    if (h.oneWay && h.segment === h.points.length - 1) {
+    if (h.oneWay && h.segment === h.points.length - 2) {
       h.progress = 0;
-      h.x = h.points[h.points.length-1][0];
-      h.y = h.points[h.points.length-1][1];
+      h.x = to[0];
+      h.y = to[1];
       h.finished = true;
       return;
     }
+    h.progress -= 1;
+    h.segment = (h.segment + 1) % h.points.length;
     if (h.segment === h.stopAt) { h.progress = 0; h.dwellLeft = h.dwell; }
   }
   const a = h.points[h.segment], b = h.points[(h.segment + 1) % h.points.length];
@@ -2606,15 +2606,15 @@ function drawProfessorBoltz() {
   ctx.translate(prof.x,prof.y+bob);
   ctx.scale(prof.facing,1);
   ctx.fillStyle="rgba(20,35,30,.2)";ctx.beginPath();ctx.ellipse(0,28,22,7,0,0,Math.PI*2);ctx.fill();
-  if(professorBoltzSprite?.complete&&professorBoltzSprite.naturalWidth){
+  if(tomKessingerSprite?.complete&&tomKessingerSprite.naturalWidth){
     const stroll=prof.dwellLeft>0?0:Math.sin(state.elapsed*7)*2.2;
     ctx.rotate(stroll*.012);
-    ctx.drawImage(professorBoltzSprite,-25,-58,50,72);
+    ctx.drawImage(tomKessingerSprite,-25,-58,50,72);
   } else {
-    drawProfessorBoltzFallback(prof);
+    drawTomKessingerFallback(prof);
   }
   ctx.fillStyle="rgba(23,60,45,.92)";roundRect(-42,17,84,20,8);ctx.fill();
-  ctx.fillStyle="#fff7d8";ctx.font="900 8px Nunito";ctx.textAlign="center";ctx.fillText("Professor Boltz",0,30);
+  ctx.fillStyle="#fff7d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("Tommy K",0,30);
   if(prof.dwellLeft>0){
     ctx.scale(prof.facing,1);
     ctx.fillStyle="rgba(255,253,246,.92)";roundRect(14,-68,68,23,10);ctx.fill();
@@ -2624,20 +2624,18 @@ function drawProfessorBoltz() {
   ctx.restore();
 }
 
-function drawProfessorBoltzFallback(prof) {
+function drawTomKessingerFallback(prof) {
   const stroll=prof.dwellLeft>0?0:Math.sin(state.elapsed*7)*2.5;
   const wave=prof.wave>0?Math.sin(state.elapsed*9)*.65:0;
   ctx.strokeStyle="#141716";ctx.lineWidth=6;ctx.lineCap="round";
   ctx.beginPath();ctx.moveTo(-7,12);ctx.lineTo(-13,25+stroll);ctx.moveTo(8,12);ctx.lineTo(14,25-stroll);ctx.stroke();
-  ctx.fillStyle="#111312";roundRect(-15,-7,30,28,8);ctx.fill();
-  ctx.fillStyle="#4a5969";ctx.beginPath();ctx.moveTo(-18,-8);ctx.lineTo(0,22);ctx.lineTo(18,-8);ctx.lineTo(12,21);ctx.lineTo(-12,21);ctx.closePath();ctx.fill();
-  ctx.strokeStyle="#f0bf9e";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(-23,11);ctx.moveTo(13,0);ctx.lineTo(23,10-wave*9);ctx.stroke();
-  ctx.fillStyle="#f0bf9e";ctx.beginPath();ctx.arc(0,-23,11,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#6a3d2a";ctx.beginPath();ctx.ellipse(-9,-18,12,25,-.45,0,Math.PI*2);ctx.ellipse(7,-19,16,28,.35,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#f0bf9e";ctx.beginPath();ctx.arc(0,-22,9,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#23465a";ctx.beginPath();ctx.arc(-3,-24,1.3,0,Math.PI*2);ctx.arc(4,-24,1.3,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="#8f5349";ctx.lineWidth=1.7;ctx.beginPath();ctx.arc(1,-18,4,.15,Math.PI-.15);ctx.stroke();
-  ctx.fillStyle="#f3ead2";roundRect(-22,10,20,14,3);ctx.fill();ctx.strokeStyle="#6e533b";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#30443b";ctx.font="900 6px Nunito";ctx.textAlign="center";ctx.fillText("PSY",-12,20);
+  ctx.fillStyle="#17222d";roundRect(-16,-8,32,30,8);ctx.fill();
+  ctx.strokeStyle="#edc3a6";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(-23,11);ctx.moveTo(13,0);ctx.lineTo(23,10-wave*9);ctx.stroke();
+  ctx.fillStyle="#edc3a6";ctx.beginPath();ctx.arc(0,-23,11,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#9a9c98";ctx.beginPath();ctx.arc(0,-27,10,Math.PI,0);ctx.fill();
+  ctx.fillStyle="#f2f0e8";ctx.beginPath();ctx.ellipse(0,-17,9,7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#273443";ctx.beginPath();ctx.arc(-3,-24,1.3,0,Math.PI*2);ctx.arc(4,-24,1.3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#9dc3d5";ctx.beginPath();ctx.moveTo(-5,-5);ctx.lineTo(0,13);ctx.lineTo(5,-5);ctx.closePath();ctx.fill();
 }
 
 function drawEasterEggs() {
@@ -3073,8 +3071,8 @@ function initStartButtonBounce() {
 }
 
 function loadSpriteAssets() {
-  professorBoltzSprite=new Image();
-  professorBoltzSprite.src="assets/marilyn-boltz-professor-sprite.svg";
+  tomKessingerSprite=new Image();
+  tomKessingerSprite.src="assets/tom-kessinger-president-sprite.svg";
   daveSprite=new Image();
   daveSprite.src="assets/student-brooklyn-kid-craig-sprite.svg";
   [

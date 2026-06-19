@@ -565,3 +565,61 @@ Session notes will be appended here as the game evolves.
 - Next steps
   - Run a focused QA pass on Dining Center Dash after production deploy completes.
   - If the zone feels good, decide whether to add a small zone-clear reward moment or start the next campus zone.
+
+## 2026-06-19 - Dining Center characters, objective recovery, and Dave campus cameo
+
+- Date/time
+  - 2026-06-19, America/New_York.
+- Feature name, work name, description, and value provided
+  - Recovered and completed the interrupted Dining Center character and animation work.
+  - Added Arjun, Maggie, and Elena as named Dining Center characters with sprites, first-name labels, dialogue, guidance, and character-specific behavior.
+  - Fixed the Dining Center 11/12 snack soft-lock experience by moving a snack that was hidden beneath Maggie and making the HUD clearly separate the 12 snacks from the required DC Cookie.
+  - Added persistent guidance to the final missing snack when the cookie is collected before all 12 snacks.
+  - Added Dave, a friendly Italian student from Brooklyn, to the main campus as a one-time character walking toward the Blue Bus on a pizza mission.
+  - Extended Dave's one-time route beyond the campus canvas and corrected the one-way lifecycle so he visibly walks off-screen before being removed.
+  - Replaced Professor Boltz at the Duck Pond with President Tom Kessinger while preserving the same route, timing, wave, and `nice ducks` moment.
+  - Added the visible Duck Pond name tag `Tommy K`.
+  - Pushed the completed release directly to production on `main`.
+  - Production commit: `fca393e` (`Add campus characters and fix DC objective flow`).
+- Files changed
+  - `index.html`
+  - `styles.css`
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+  - `assets/student-bico-cross-registrant-sprite.svg`
+  - `assets/student-dc-veteran-sprite.svg`
+  - `assets/student-library-regular-sprite.svg`
+  - `assets/student-brooklyn-kid-craig-sprite.svg` (the asset now represents Dave; the filename was retained to avoid unnecessary asset churn)
+  - `assets/tom-kessinger-president-sprite.svg`
+- Technical Architecture changes or key technical decisions made
+  - Extended Dining Center state with character dialogue, movement, timing, and visual-animation state.
+  - Kept the DC Cookie separate from `requiredSnacks`; the exit unlock rule remains `12 snacks + cookie`.
+  - Added one shared Dining Center objective-text helper so desktop, mobile, and pickup feedback use the same source of truth.
+  - Replaced one generic campus backpack-student hazard with Dave while preserving its speed, collision radius, scoring, keyboard controls, and touch controls.
+  - Corrected the reusable one-way hazard lifecycle so a character completes the final route segment before becoming finished; a finished character then stops updating, drawing, colliding, and triggering greetings.
+  - Loaded named SVG sprites through the existing static asset pipeline; the app remains a standalone static web app.
+- Assumptions
+  - `main` remains the production branch and production deploys from `origin/main`.
+  - The DC objective should require 12 ordinary snack pickups plus the separate legendary cookie.
+  - Dave should appear once per game run, walk toward the Blue Bus, and not return after leaving.
+  - First-name labels are clearer and less visually noisy than full student names at gameplay scale.
+- Known limitations
+  - Browser visual QA was blocked by the local-file browser security policy; syntax, diff, asset-reference, route-boundary, and collision-clearance checks passed.
+  - Dave's SVG filename still contains `craig`, although all player-facing text, code identifiers, and SVG metadata identify him as Dave.
+  - Three unused concept sprites remain untracked locally and were intentionally excluded from production.
+- Key learnings that you can bring with you to future sessions
+  - Collectibles can be technically reachable but functionally missed when a character sprite is drawn over them; visual occlusion must be tested alongside collision geometry.
+  - Multi-part objectives need one shared copy helper so the HUD never directs the player to a still-locked exit.
+  - Named campus characters feel more intentional when their route, speech, collision feedback, and disappearance behavior tell one compact story.
+  - One-way ambient characters need an explicit finished lifecycle; teleporting them back to the start breaks the illusion of a purposeful journey.
+- Remaining TODOs
+  - Run a real desktop and mobile visual playthrough of the production build.
+  - Confirm all 12 Dining Center snacks remain easy to spot during motion and under character overlays.
+  - Confirm Dave's extended one-time route feels long enough, his speech bubble remains readable, and he visibly clears the right edge before disappearing.
+  - Confirm Tommy K's sprite, name tag, and `nice ducks` bubble remain readable around the Duck Pond.
+  - Rename Dave's SVG filename in a future cleanup if asset naming consistency becomes important.
+  - Decide whether to use or delete the untracked bike commuter, campus naturalist, and reunion organizer concept sprites.
+- Next steps
+  - QA the deployed Dining Center completion flow: collect the cookie early, reach 11/12 snacks, follow the final-snack guidance, then verify the exit unlocks at 12/12.
+  - QA Dave's full campus route and confirm he disappears permanently at the end.
+  - If character cameos test well, define the next campus character around a distinct landmark, route, and one-sentence situation.
