@@ -90,6 +90,9 @@ const DINING_CHARACTER_SPRITE_WIDTH = 72;
 const DINING_CHARACTER_SPRITE_HEIGHT = 104;
 const ELENA_WARNING_SECONDS = 1.35;
 const ARJUN_GUIDE_SECONDS = 11;
+const HONOR_CODE_GRACE_SECONDS = 4;
+const HONOR_CODE_MONITOR_SPEED = 150;
+const HONOR_CODE_MONITOR_RADIUS = 25;
 const SOUND_SPRITES = {
   start: [0, 450],
   acorn: [530, 240],
@@ -448,6 +451,12 @@ function createDiningCenterZoneState() {
     cookie: { ...DINING_CENTER_ZONE.cookie, collected:false },
     coffee: { ...DINING_CENTER_ZONE.coffee, collected:false, respawn:0 },
     hazards: DINING_CENTER_ZONE.hazards.map(h=>({ ...h, points:h.points.map(([x,y])=>[x,y]) })),
+    honorCodeChase: {
+      active:false,
+      graceLeft:0,
+      captured:false,
+      monitors:[]
+    },
     characters: {
       arjun: {
         ...DINING_CENTER_CHARACTERS.arjun, line:"", lineLife:0, introduced:false,
@@ -473,7 +482,8 @@ function createDiningCenterZoneState() {
       doorOpen:0,
       lightSweep:0,
       exitLabelScale:.72,
-      cookieBurst:{ active:false, x:0, y:0, scale:.7, alpha:0, glow:0, spin:0 }
+      cookieBurst:{ active:false, x:0, y:0, scale:.7, alpha:0, glow:0, spin:0 },
+      honorPulse:0
     }
   };
 }
@@ -570,6 +580,7 @@ function updateDiningCenterZone(dt) {
   }
   updateDiningCenterCharacters(dt);
   state.zone.hazards.forEach(h=>moveDiningCenterHazard(h,dt));
+  updateHonorCodeChase(dt);
   state.zone.snacks.forEach(snack=>{
     if(!snack.collected && distance(state.player,snack)<34)collectDiningCenterSnack(snack);
   });
@@ -693,9 +704,74 @@ function collectDiningCenterCookie() {
   state.score+=3;
   state.flash=.35;
   spawnParticles(state.zone.cookie.x,state.zone.cookie.y,"#ffe38a");
-  addScorePop(state.zone.cookie.x,state.zone.cookie.y,"DC COOKIE! +3","#fff1bd",23);
-  showToast(`Legendary DC Cookie acquired. ${getDiningCenterObjectiveText()}.`);
+  addScorePop(state.zone.cookie.x,state.zone.cookie.y,"HONOR CODE ALERT!","#fff1bd",22);
+  startHonorCodeChase();
   playSound("golden");
+  updateDiningExitUnlock();
+}
+
+function startHonorCodeChase() {
+  const chase=state.zone.honorCodeChase;
+  Object.assign(chase,{
+    active:true,
+    graceLeft:HONOR_CODE_GRACE_SECONDS,
+    captured:false,
+    monitors:[
+      { name:"Honor Monitor", x:1815, y:245, angle:0, lag:.9, item:"clipboard", color:"#233d5a", spawn:0 },
+      { name:"Code Monitor", x:2205, y:560, angle:0, lag:1.05, item:"rulebook", color:"#315440", spawn:0 }
+    ]
+  });
+  state.zone.visual.honorPulse=1;
+  state.shake=reducedMotionQuery.matches?0:.12;
+  state.reactions.push({ x:state.zone.cookie.x, y:state.zone.cookie.y-48, life:1.4, text:"COOKIE WITHOUT PAYMENT!", color:"#fff1bd", stars:true });
+  showToast("Honor Code Alert! HC Monitors will pursue SBS until he exits the DC.");
+}
+
+function updateHonorCodeChase(dt) {
+  const chase=state.zone?.honorCodeChase;
+  if(!chase?.active)return;
+  chase.graceLeft=Math.max(0,chase.graceLeft-dt);
+  state.zone.visual.honorPulse=Math.max(0,state.zone.visual.honorPulse-dt*.65);
+  chase.monitors.forEach((monitor,index)=>{
+    monitor.spawn=Math.min(1,(monitor.spawn||0)+dt*.7);
+    const lead=.16+index*.08;
+    const targetX=state.player.x+state.player.vx*lead;
+    const targetY=state.player.y+state.player.vy*lead;
+    const dx=targetX-monitor.x,dy=targetY-monitor.y,dist=Math.hypot(dx,dy)||1;
+    const graceSlowdown=chase.graceLeft>0?.18:1;
+    const speed=HONOR_CODE_MONITOR_SPEED*graceSlowdown/monitor.lag;
+    const step=Math.min(dist,speed*dt);
+    monitor.x+=dx/dist*step;
+    monitor.y+=dy/dist*step;
+    monitor.angle=Math.atan2(dy,dx);
+  });
+  if(chase.graceLeft<=0&&!state.player.invulnerable&&chase.monitors.some(m=>distance(state.player,m)<state.player.r+HONOR_CODE_MONITOR_RADIUS)){
+    handleHonorCodeCapture();
+    return;
+  }
+}
+
+function handleHonorCodeCapture() {
+  const chase=state.zone?.honorCodeChase;
+  if(!chase?.active)return;
+  chase.active=false;
+  chase.captured=true;
+  state.zone.cookie.collected=false;
+  state.zone.cookieCollected=false;
+  state.score=Math.max(0,state.score-3);
+  state.zone.visual.honorPulse=0;
+  state.player.x=DINING_CENTER_ZONE.start.x+42;
+  state.player.y=DINING_CENTER_ZONE.start.y-16;
+  state.player.vx=0;state.player.vy=0;
+  state.player.invulnerable=1.2;
+  state.player.spin=.45;
+  state.combo=0;state.comboWindow=0;
+  state.shake=reducedMotionQuery.matches?0:.22;
+  spawnParticles(state.player.x,state.player.y,"#fff7d8");
+  addScorePop(state.player.x,state.player.y-34,"COOKIE RETURNED","#fff1bd",20);
+  state.reactions.push({ x:state.player.x, y:state.player.y-50, life:1.35, text:"RESTORATIVE CHAT!", color:"#fff1bd", stars:false });
+  showToast("Restorative conversation complete. Cookie returned; acorns stay collected.");
+  playSound("wobble");
   updateDiningExitUnlock();
 }
 
@@ -739,6 +815,9 @@ function updateDiningExitUnlock() {
 }
 
 function getDiningCenterObjectiveText() {
+  const chase=state.zone.honorCodeChase;
+  if(chase?.active&&chase.graceLeft>0)return "Honor Code alert!";
+  if(chase?.active)return "HC Monitors pursuing";
   const snacksLeft=Math.max(0,DINING_CENTER_ZONE.requiredSnacks-state.zone.snacksCollected);
   if(snacksLeft>0&&!state.zone.cookieCollected)return `${snacksLeft} snack${snacksLeft===1?"":"s"} + DC Cookie`;
   if(snacksLeft>0)return `${snacksLeft} snack${snacksLeft===1?"":"s"} left`;
@@ -1270,6 +1349,7 @@ function drawDiningCenterZone() {
   drawDiningCookieBurst();
   drawDiningCenterCharacters();
   state.zone.hazards.forEach(drawDiningHazard);
+  drawHonorCodeChase();
   drawPlayer();
   state.particles.forEach(drawParticle);
   state.reactions.forEach(drawReaction);
@@ -1693,6 +1773,74 @@ function drawDiningCookieBurst() {
   ctx.restore();
 }
 
+function drawHonorCodeChase() {
+  const chase=state.zone?.honorCodeChase;
+  if(!chase?.active)return;
+  const pulse=Math.sin(state.elapsed*10)*.5+.5;
+  const warning=chase.graceLeft>0;
+  ctx.save();
+  ctx.strokeStyle=warning?`rgba(248,213,119,${.36+pulse*.26})`:`rgba(139,0,0,${.18+pulse*.16})`;
+  ctx.lineWidth=warning?10+pulse*8:7+pulse*5;
+  ctx.setLineDash([18,14]);
+  ctx.beginPath();ctx.arc(state.player.x,state.player.y,warning?92+pulse*20:72+pulse*18,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);
+  chase.monitors.forEach((monitor,index)=>drawHonorCodeMonitor(monitor,index));
+  if(warning){
+    ctx.fillStyle="rgba(139,0,0,.92)";
+    roundRect(state.player.x-78,state.player.y-104,156,30,12);ctx.fill();
+    ctx.fillStyle="#fff7d8";ctx.font="900 13px Nunito";ctx.textAlign="center";ctx.fillText("HONOR CODE ALERT!",state.player.x,state.player.y-84);
+  }
+  ctx.restore();
+}
+
+function drawHonorCodeMonitor(monitor,index) {
+  const bob=Math.sin(state.elapsed*14+index)*3;
+  const spawn=clamp(monitor.spawn||0,0,1);
+  const ease=1-Math.pow(1-spawn,3);
+  ctx.save();
+  ctx.translate(monitor.x,monitor.y+bob);
+  ctx.globalAlpha=.18+.82*ease;
+  ctx.scale(.42+.58*ease,.42+.58*ease);
+  if(spawn<1){
+    const halo=1-spawn;
+    ctx.save();
+    ctx.globalAlpha=.35*halo;
+    ctx.strokeStyle="#fff1bd";ctx.lineWidth=5;
+    ctx.beginPath();ctx.arc(0,-16,42+halo*42,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+  ctx.rotate(monitor.angle||0);
+  ctx.rotate(Math.PI/2);
+  ctx.fillStyle="rgba(24,37,31,.24)";
+  ctx.beginPath();ctx.ellipse(0,25,22,9,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f4c49c";
+  ctx.beginPath();ctx.arc(0,-25,12,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=index===0?"#573626":"#2b211b";
+  ctx.beginPath();ctx.arc(0,-29,12,Math.PI,0);ctx.fill();
+  ctx.fillStyle=monitor.color;
+  roundRect(-16,-13,32,39,8);ctx.fill();
+  ctx.strokeStyle="#f8d577";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-14,-8);ctx.lineTo(14,22);ctx.stroke();
+  ctx.fillStyle="#f8d577";ctx.beginPath();ctx.arc(7,-2,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#173c2d";ctx.font="900 6px Nunito";ctx.textAlign="center";ctx.fillText("HC",7,0);
+  ctx.strokeStyle="#1f2d28";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(-15,3);ctx.lineTo(-27,13);ctx.moveTo(15,3);ctx.lineTo(29,10);ctx.stroke();
+  if(monitor.item==="clipboard"){
+    ctx.fillStyle="#fff7d8";roundRect(18,6,20,25,4);ctx.fill();ctx.strokeStyle="#7a5438";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="#7a5438";ctx.fillRect(23,12,10,2);ctx.fillRect(23,18,9,2);
+  } else {
+    ctx.fillStyle="#6a0000";roundRect(17,7,22,26,4);ctx.fill();ctx.strokeStyle="#fff1bd";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="#fff1bd";ctx.font="900 6px Nunito";ctx.fillText("HC",28,23);
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha=.18+.82*ease;
+  const labelY=monitor.y-54+bob;
+  ctx.fillStyle="rgba(23,60,45,.94)";roundRect(monitor.x-50,labelY,100,22,9);ctx.fill();
+  ctx.fillStyle="#fff7d8";ctx.font="900 9px Nunito";ctx.textAlign="center";ctx.fillText("HC MONITOR",monitor.x,labelY+14);
+  ctx.restore();
+}
+
 function drawDiningCoffee(coffee) {
   if(coffee.collected)return;
   ctx.save();ctx.translate(coffee.x,coffee.y+Math.sin(state.elapsed*5)*3);
@@ -1772,13 +1920,21 @@ function drawSlidingTrayHazard() {
 function drawDiningCenterObjective() {
   if(isMobileView())return;
   const view=getDiningVisibleView(),x=view.x+26,y=view.y+(isMobileView()?82:118);
+  const chase=state.zone.honorCodeChase;
   ctx.save();
-  ctx.fillStyle="rgba(255,253,246,.94)";roundRect(x,y,294,92,12);ctx.fill();
+  ctx.fillStyle=chase.active?"rgba(255,246,218,.97)":"rgba(255,253,246,.94)";
+  roundRect(x,y,294,chase.active?118:92,12);ctx.fill();
   ctx.strokeStyle="rgba(49,84,64,.28)";ctx.lineWidth=2;ctx.stroke();
   ctx.fillStyle="#6a0000";ctx.font="900 13px Nunito";ctx.fillText("Dining Center Dash",x+16,y+24);
   ctx.fillStyle="#315440";ctx.font="900 16px Nunito";ctx.fillText(`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks}`,x+16,y+50);
   ctx.fillStyle=state.zone.bonks>=2?"#8b2e22":"#315440";ctx.fillText(`Bonks ${state.zone.bonks}/${DINING_CENTER_ZONE.bonkLimit}`,x+154,y+50);
   ctx.fillStyle=state.zone.cookieCollected?"#315440":"#8a6b3f";ctx.font="900 13px Nunito";ctx.fillText(getDiningCenterObjectiveText(),x+18,y+73);
+  if(chase.active){
+    const barW=248,fillW=barW*(1-(chase.graceLeft/HONOR_CODE_GRACE_SECONDS));
+    ctx.fillStyle="rgba(139,0,0,.16)";roundRect(x+18,y+88,barW,12,6);ctx.fill();
+    ctx.fillStyle="#8b0000";roundRect(x+18,y+88,fillW,12,6);ctx.fill();
+    ctx.fillStyle="#315440";ctx.font="900 10px Nunito";ctx.fillText(chase.graceLeft>0?"HC MONITORS MANIFESTING":"HC MONITORS PURSUING",x+18,y+111);
+  }
   ctx.restore();
 }
 
@@ -2837,7 +2993,9 @@ function updateHud(){
   if(state.mode === MODE_DINING_CENTER && state.zone){
     document.getElementById("tourKicker").textContent=`DC snacks ${state.zone.snacksCollected} / ${DINING_CENTER_ZONE.requiredSnacks}`;
     document.getElementById("mobileDestination").textContent=getDiningCenterObjectiveText();
-    document.getElementById("mobilePlayTip").textContent=`Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks} • Cookie ${state.zone.cookieCollected?"secured":"needed"}`;
+    document.getElementById("mobilePlayTip").textContent=state.zone.honorCodeChase?.active
+      ? "Dodge the Honor Code monitors"
+      : `Snacks ${state.zone.snacksCollected}/${DINING_CENTER_ZONE.requiredSnacks} • Cookie ${state.zone.cookieCollected?"secured":"needed"}`;
   } else {
     document.getElementById("tourKicker").textContent=`Campus secrets ${state.secrets} / ${landmarks.length}`;
     const chapter=trailChapters[state.chapterIndex];

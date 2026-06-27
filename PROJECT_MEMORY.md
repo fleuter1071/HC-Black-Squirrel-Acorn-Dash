@@ -623,3 +623,42 @@ Session notes will be appended here as the game evolves.
   - QA the deployed Dining Center completion flow: collect the cookie early, reach 11/12 snacks, follow the final-snack guidance, then verify the exit unlocks at 12/12.
   - QA Dave's full campus route and confirm he disappears permanently at the end.
   - If character cameos test well, define the next campus character around a distinct landmark, route, and one-sentence situation.
+
+## 2026-06-19 - Dave walk-off fix and Tommy K production release
+
+- Date/time
+  - 2026-06-19, America/New_York.
+- Feature name, work name, description, and value provided
+  - Fixed Dave's exit so he visibly walks beyond the right edge of the campus instead of disappearing inside the playable area.
+  - Replaced Professor Boltz at the Duck Pond with President Tom Kessinger while preserving the existing stroll, pause, wave, and `nice ducks` behavior.
+  - Added the player-facing name tag `Tommy K`.
+  - Pushed the update to production on `main`.
+  - Production commit: `e85c2cf` (`Polish campus character exits and Duck Pond cameo`).
+- Files changed
+  - `script.js`
+  - `PROJECT_MEMORY.md`
+  - `assets/tom-kessinger-president-sprite.svg`
+- Technical Architecture changes or key technical decisions made
+  - Fixed one-way route completion so a character becomes finished only after traversing the final segment and reaching the final waypoint.
+  - Extended Dave's route to `x: 1700`, 100 pixels beyond the 1600-pixel campus canvas, ensuring his sprite and name tag clear the screen naturally.
+  - Reused the existing Duck Pond character state and movement logic for Tommy K rather than creating a second ambient-character system.
+  - Added a Tom-specific fallback drawing so the correct character remains recognizable if the SVG is slow or fails to load.
+- Assumptions
+  - A one-time campus character should complete their visible journey before being removed from rendering and collision checks.
+  - Tommy K should inherit the full Duck Pond behavior previously used by Professor Boltz.
+  - `main` remains the production branch.
+- Known limitations
+  - Dave and Tommy K still need a final real-device visual playthrough on the deployed build.
+  - Some internal state and function names still reference `professorBoltz`; behavior is correct, but those names could be generalized in a future cleanup.
+  - Three unused concept sprites remain untracked locally and were intentionally excluded from production.
+- Key learnings that you can bring with you to future sessions
+  - For one-way paths, entering the final segment is not the same as completing it; removal must happen only after the final interpolation finishes.
+  - Off-screen exits should include enough clearance for labels, shadows, and sprite width—not only the character's center point.
+  - Existing ambient-character systems can support new cameos cheaply when movement and presentation are separated from the loaded artwork.
+- Remaining TODOs
+  - Confirm Dave visibly clears the right edge on desktop and mobile.
+  - Confirm `Tommy K` and the `nice ducks` bubble do not overlap or clip near the Duck Pond.
+  - Consider renaming the remaining Professor Boltz internal state and functions to neutral Duck Pond character names.
+- Next steps
+  - Run one focused production QA pass covering Dave's complete route and Tommy K's full Duck Pond loop.
+  - If both pass, use the same route-plus-situation pattern for future named campus cameos.

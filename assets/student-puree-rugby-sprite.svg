@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 260" role="img" aria-labelledby="title desc">
+  <title id="title">Puree — Rugby Buddy</title>
+  <desc id="desc">Puree, a cute male student with light reddish hair, a friendly smile, and a striped rugby jersey. He is buddies with Dave and can be used as a reusable campus character sprite.</desc>
+  <defs>
+    <linearGradient id="hair" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f0a05b"/>
+      <stop offset=".55" stop-color="#cf6f3e"/>
+      <stop offset="1" stop-color="#8d3f28"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f4c29d"/>
+      <stop offset="1" stop-color="#d99067"/>
+    </linearGradient>
+    <linearGradient id="jerseyBase" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff3d2"/>
+      <stop offset="1" stop-color="#e7d4ad"/>
+    </linearGradient>
+    <linearGradient id="rugbyBall" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#9c5a2e"/>
+      <stop offset="1" stop-color="#5f331d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#101815" flood-opacity=".24"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <ellipse cx="90" cy="239" rx="42" ry="11" fill="#132019" opacity=".22"/>
+
+    <path d="M46 152c13-14 28-21 45-21 18 0 33 7 45 22l18 84H27Z" fill="url(#jerseyBase)"/>
+    <path d="M48 165h88l4 16H43Z" fill="#8b2438"/>
+    <path d="M43 194h101l4 17H39Z" fill="#233d5a"/>
+    <path d="M35 223h115l4 14H27Z" fill="#8b2438"/>
+    <path d="M55 151c-14 8-24 21-30 38l21 9 19-41Z" fill="#fff3d2"/>
+    <path d="M126 151c14 8 24 21 30 38l-21 9-19-41Z" fill="#fff3d2"/>
+    <path d="M31 178l21 9-5 14-22-9Z" fill="#8b2438"/>
+    <path d="M129 187l21-9 6 14-22 9Z" fill="#8b2438"/>
+
+    <path d="M74 143c4 13 10 20 18 20 8 0 14-7 18-20" fill="url(#skin)"/>
+    <path d="M68 146c7 18 15 27 24 27 10 0 18-9 25-27" fill="none" stroke="#fff7df" stroke-width="6" stroke-linecap="round"/>
+    <path d="M78 156c8 8 17 12 27 0" fill="none" stroke="#233d5a" stroke-width="3" stroke-linecap="round"/>
+
+    <path d="M55 69c6-24 20-38 39-38 21 0 36 14 41 39 4 22-1 47-12 63-9 13-20 20-33 20-15 0-27-8-36-22-10-16-13-42 1-62Z" fill="url(#skin)"/>
+    <path d="M47 89c8-35 25-56 49-58 23-1 41 18 49 55-13-10-27-15-42-15-8-9-18-14-31-14-14 1-22 12-25 32Z" fill="url(#hair)"/>
+    <path d="M54 70c7-34 26-54 50-51 24 3 40 26 42 63-11-14-25-22-42-25-18-3-34 1-50 13Z" fill="url(#hair)"/>
+
+    <path d="M62 88c7-4 14-4 22 0M101 88c7-4 14-3 21 1" fill="none" stroke="#7a432e" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="98" rx="3.6" ry="4.4" fill="#2a2a25"/>
+    <ellipse cx="112" cy="98" rx="3.6" ry="4.4" fill="#2a2a25"/>
+    <path d="M92 101c-2 8-5 14-9 18 5 3 11 3 17 0" fill="none" stroke="#a86449" stroke-width="3" stroke-linecap="round"/>
+    <path d="M73 128c11 11 27 11 39 0-4 13-11 19-20 19-8 0-15-6-19-19Z" fill="#fffaf0" stroke="#8d453e" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M64 115c5 3 10 4 15 3M105 118c5 1 10 0 15-3" fill="none" stroke="#bd6c4d" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+    <g fill="#bf7655" opacity=".9">
+      <circle cx="66" cy="108" r="1.4"/>
+      <circle cx="72" cy="112" r="1.2"/>
+      <circle cx="116" cy="112" r="1.2"/>
+      <circle cx="122" cy="108" r="1.4"/>
+    </g>
+
+    <g transform="translate(60 184) rotate(-13)">
+      <ellipse cx="0" cy="0" rx="20" ry="12" fill="url(#rugbyBall)" stroke="#3f2316" stroke-width="3"/>
+      <path d="M-14 0c8-6 19-6 28 0M-5-6v12M0-7v14M5-6v12" fill="none" stroke="#f5dfbd" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <path d="M31 188c-6 8-9 16-10 24M149 188c6 8 9 16 10 24" fill="none" stroke="#e8aa82" stroke-width="9" stroke-linecap="round"/>
+    <path d="M68 225l-10 26M111 225l11 26" stroke="#293142" stroke-width="9" stroke-linecap="round"/>
+    <path d="M52 252h22M112 252h22" stroke="#f4f0e4" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>
