@@ -233,7 +233,7 @@ function newState() {
     hidden: landmarks.map(l => ({ x:l.secret.x, y:l.secret.y, object:l.secret.object, label:l.secret.label, collected:false, hidden:true, landmark:l })),
     hazards: hazardRoutes.map(route => ({ ...route, segment:0, progress:0, x:route.points[0][0], y:route.points[0][1] })),
     particles: [], spills: [], reactions: [], celebrations: [], scorePops: [], golden: null, powerup: null, powerupBag: [],
-    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, sbsGreetingPlayed:false, progress:loadZoneProgress(), zone:null, zonePrompt:null, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
+    activePowerups: { soup:0, leaf:0, scroll:0, skeeters:0, skeetersBoost:0, cape:0 }, skeetersDeliveries:0, skeetersBlocks:0, capeFlights:0, chuckWaves:0, chuckCheckIns:0, sbsGreetingPlayed:false, progress:loadZoneProgress(), diningCenterClearedThisRun:false, zone:null, zonePrompt:null, nextGoldenAt: FIRST_GOLDEN_ACORN_AT, nextPowerupAt: FIRST_POWERUP_AT, nextAmbientAt: 8, nextDuckAt:18, hornReady:true, elapsed: 0,
     leaves: Array.from({length:20},(_,i)=>({x:(i*137)%WORLD.width,y:(i*83)%WORLD.height,phase:i*.7,speed:8+(i%5)*2})),
     ducks: [{x:118,y:884,phase:0,speed:7},{x:174,y:912,phase:1.8,speed:5},{x:220,y:883,phase:3.4,speed:6}],
     professorBoltz: { x:292, y:862, segment:0, progress:0, speed:24, dwellLeft:1.8, facing:-1, wave:0, route:[[292,862],[246,840],[192,826],[134,846],[103,884],[128,930],[204,948],[270,916],[292,862]] }
@@ -531,6 +531,7 @@ function returnToHubFromDiningCenter(message) {
   const completed=state.zone?.result === "complete";
   const returnTo=state.zone?.returnTo || DINING_CENTER_ZONE.return;
   if(completed){
+    state.diningCenterClearedThisRun=true;
     state.progress.diningCenter.completed=true;
     state.progress.diningCenter.snacks=Math.max(state.progress.diningCenter.snacks, state.zone.snacksCollected);
     const finishTime=Math.max(0, DINING_CENTER_ZONE.duration - state.zone.timeLeft);
@@ -966,7 +967,7 @@ function busCollisionGap(bus) {
 }
 
 function showDefaultNotebook() {
-  if(state.progress?.diningCenter?.completed){
+  if(state.diningCenterClearedThisRun){
     document.getElementById("missionTitle").textContent="DC Dash cleared";
     document.getElementById("missionText").textContent="The Dining Center snack heist is complete. Keep roaming campus or chase the next acorn trail.";
     return;
@@ -1310,7 +1311,7 @@ function refreshOrientationGate() {
 }
 
 function drawZoneMarkers() {
-  const marker=DINING_CENTER_ZONE.marker,completed=state.progress.diningCenter.completed;
+  const marker=DINING_CENTER_ZONE.marker,completed=state.diningCenterClearedThisRun;
   const near=distance(state.player,marker)<marker.radius+24;
   const pulse=Math.sin(state.elapsed*5)*.5+.5;
   ctx.save();
@@ -2038,6 +2039,7 @@ function drawBuilding(l) {
     ctx.fillStyle="#6a5546";for(let i=0;i<5;i++)for(let j=0;j<2;j++)ctx.fillRect(x+25+i*43,y+22+j*35,14,19);
     ctx.fillStyle="#5d493b";ctx.fillRect(x+w/2-10,y+60,20,38);
     ctx.fillStyle="#b69a78";ctx.fillRect(x+12,y+10,w-24,8);
+    drawLloydDormLife(l);
   } else if(l.id==="dc"){
     drawStoneTexture(x+7,y+7,w-14,h-14);
     ctx.fillStyle="#765b48";ctx.fillRect(x+25,y+30,w-50,62);
@@ -2053,6 +2055,56 @@ function drawBuilding(l) {
     for(let i=0;i<cols;i++) for(let j=0;j<2;j++) ctx.fillRect(x+22+i*(w-44)/(cols-1)-7,y+25+j*42,15,20);
   }
   drawMapLabel(x+w/2,y+h+24,l.short,12);
+}
+
+function drawLloydDormLife(l) {
+  const windows=[
+    { x:l.x+25, y:l.y+22, phase:0, active:true },
+    { x:l.x+68, y:l.y+22, phase:1.7, active:false },
+    { x:l.x+111, y:l.y+22, phase:3.2, active:false, passer:true },
+    { x:l.x+154, y:l.y+22, phase:4.4, active:false },
+    { x:l.x+197, y:l.y+22, phase:5.8, active:true },
+    { x:l.x+68, y:l.y+57, phase:2.6, active:false },
+    { x:l.x+154, y:l.y+57, phase:4.9, active:false }
+  ];
+  ctx.save();
+  windows.forEach((win)=>{
+    const flicker=Math.sin(state.elapsed*.2+win.phase)*.5+.5;
+    const lit=win.active||flicker>.985;
+    if(!lit)return;
+    const warmth=.48+flicker*.18;
+    ctx.save();
+    ctx.globalAlpha=warmth;
+    ctx.shadowColor="#ffd977";ctx.shadowBlur=5;
+    ctx.fillStyle="#f8d577";roundRect(win.x-1,win.y-1,16,21,3);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(255,249,205,.68)";ctx.fillRect(win.x+2,win.y+2,10,4);
+    ctx.restore();
+    drawLloydWindowMuntins(win.x,win.y);
+    if(win.passer)drawLloydPassingSilhouette(win.x,win.y,win.phase);
+  });
+  ctx.restore();
+}
+
+function drawLloydWindowMuntins(x,y) {
+  ctx.save();
+  ctx.strokeStyle="rgba(83,61,43,.48)";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x+7,y);ctx.lineTo(x+7,y+19);ctx.moveTo(x,y+9);ctx.lineTo(x+14,y+9);ctx.stroke();
+  ctx.restore();
+}
+
+function drawLloydPassingSilhouette(x,y,phase) {
+  const cycle=(state.elapsed*.02+phase)%1;
+  const alpha=cycle>.18&&cycle<.26?Math.sin((cycle-.18)/.08*Math.PI):0;
+  if(alpha<=0)return;
+  const sx=x-5+cycle*24;
+  ctx.save();
+  ctx.beginPath();ctx.rect(x,y,14,19);ctx.clip();
+  ctx.globalAlpha=.64*alpha;
+  ctx.fillStyle="#2b211b";
+  ctx.beginPath();ctx.arc(sx,y+7,4,0,Math.PI*2);ctx.fill();
+  roundRect(sx-5,y+11,10,11,4);ctx.fill();
+  ctx.restore();
 }
 
 function drawStoneTexture(x,y,w,h) {
@@ -2814,7 +2866,7 @@ function getRank() {
 
 function getBestMoment() {
   if(state.secrets===landmarks.length)return "found every campus secret.";
-  if(state.progress?.diningCenter?.completed)return "cleared the Dining Center snack heist.";
+  if(state.diningCenterClearedThisRun)return "cleared the Dining Center snack heist.";
   if(state.capeFlights>0)return "sent Super SBS flying over campus trouble.";
   if(state.skeetersBlocks>0)return "saved the stash with a Skeeter's pizza box.";
   if(state.skeetersDeliveries>0)return "completed a heroic Skeeter's delivery.";
